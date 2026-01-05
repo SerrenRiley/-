@@ -1,0 +1,10 @@
+{
+  "name": "战区站点 · 模拟经营",
+  "short_name": "战区站点",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "description": "无服务器的前端模拟经营+恋爱事件小游戏（离线可玩）",
+  "icons": []
+}
