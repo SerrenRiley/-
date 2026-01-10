@@ -1,12 +1,10 @@
 <!DOCTYPE html>
-
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>战区站点 · 模拟经营（单文件版 v6 稳定）</title>
+<title>任务卡 · 日常轻张力 v0.3</title>
 <style>
-/* Terminal-ish UI, no external deps */
 :root{
   --bg:#0b0f17;
   --panel:#0f1726;
@@ -193,26 +191,6 @@ body{
 .row.subtle{ color: var(--muted); }
 .divider{ height: 1px; background: rgba(255,255,255,.08); margin: 12px 0; }
 
-.affList{ display:flex; flex-direction:column; gap:10px; }
-.affItem{
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
-  border-radius: 14px;
-  padding: 10px;
-}
-.affTop{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
-.affName{ font-weight: 800; }
-.affStage{ font-size: 12px; color: var(--muted); }
-.affBar{
-  margin-top: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.06);
-  overflow:hidden;
-  border: 1px solid rgba(255,255,255,.10);
-}
-.affFill{ height: 100%; width: 0%; background: rgba(106,169,255,.55); }
-
 .footer{
   margin-top: 12px;
   font-size: 12px;
@@ -228,1829 +206,1201 @@ body{
   .headerActions{ justify-content:flex-end; }
   .hud{ justify-content:flex-start; }
 }
-/* Editor modal */
-.modal{ position:fixed; inset:0; z-index:99998; display:flex; align-items:center; justify-content:center; padding:16px; }
-.modalBackdrop{ position:absolute; inset:0; background:rgba(0,0,0,.55); }
-.modalCard{ position:relative; width:min(900px, 100%); max-height:86vh; overflow:hidden; border-radius:16px; border:1px solid rgba(216,226,255,.18); background:rgba(18,20,26,.96); box-shadow:0 18px 60px rgba(0,0,0,.45); }
-.modalHead{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid rgba(216,226,255,.12); }
-.modalTitle{ font-weight:700; }
-.modalBody{ padding:12px 14px 14px; }
-.editorArea{ width:100%; height:44vh; resize:vertical; padding:10px 12px; border-radius:12px; border:1px solid rgba(216,226,255,.18); background:rgba(8,10,14,.85); color:inherit; font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b1220">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="战区站点">
+<meta name="apple-mobile-web-app-title" content="任务卡 v0.3">
 </head>
 <body>
-<div id="jsStatus" style="position:fixed;right:10px;bottom:10px;z-index:99999;
-background:#111827;color:#e5e7eb;border:1px solid rgba(255,255,255,.15);
-padding:6px 10px;border-radius:999px;font:12px/1.2 system-ui;opacity:.85">JS 未加载</div>
-<div id="jsError" style="display:none;position:fixed;left:10px;right:10px;top:10px;z-index:99999;
-background:#2a0f13;color:#ffe4e6;border:1px solid rgba(255,255,255,.15);
-padding:10px 12px;border-radius:12px;font:12px/1.35 system-ui;white-space:pre-wrap"></div>
-
 <div class="app">
 <header class="topbar">
-<div class="brand">
-<div class="title">战区站点 · 经营终端</div>
-<div class="subtitle">纯前端 / 无服务器 · 每消耗 1 AP 触发 1 次事件</div>
-</div>
-<div class="hud">
-<div class="pill">DAY <span id="day">1</span></div>
-<div class="pill">AP <span id="ap">3</span>/<span id="apMax">3</span></div>
-<div class="pill">CASH $<span id="cash">800</span></div>
-<div class="pill">温度 <span id="comfort">50</span></div>
-<div class="pill subtle">玩家 <span id="player">serren</span></div>
-</div>
-<div class="headerActions">
-<button class="btn primary" id="btnNew">新开档</button>
-<button class="btn" id="btnSave">手动保存</button>
-<button class="btn danger" id="btnResetBest">清空存档</button>
-</div>
+  <div class="brand">
+    <div class="title">任务卡 · 日常轻张力 v0.3</div>
+    <div class="subtitle">纯前端 / 无第三方库 · 每天必触发一次随机事件</div>
+  </div>
+  <div class="hud">
+    <div class="pill">DAY <span id="day">1</span></div>
+    <div class="pill">信任 <span id="trust">5</span></div>
+    <div class="pill">体力 <span id="stamina">6</span></div>
+    <div class="pill">张力 <span id="chemistry">0</span></div>
+    <div class="pill subtle">物品 <span id="itemsSummary">-</span></div>
+  </div>
+  <div class="headerActions">
+    <button class="btn primary" id="btnNew">新开档</button>
+    <button class="btn" id="btnSave">手动保存</button>
+    <button class="btn danger" id="btnReset">清空存档</button>
+  </div>
 </header>
 <main class="layout">
-<section class="panel logPanel">
-<div class="panelTitle">终端日志</div>
-<div class="log" id="log"></div>
-<div class="eventBox">
-<div class="eventText" id="eventText"></div>
-<div class="choices" id="choices"></div>
-</div>
-</section>
-<section class="panel actionsPanel">
-<div class="panelTitle">行动</div>
-<div class="cards">
-<button class="card" id="actShop">
-<div class="cardTitle">开门营业</div>
-<div class="cardDesc">等待顾客上门，触发站点事件</div>
-<div class="cardMeta">消耗 1 AP</div>
-</button>
-<button class="card" id="actPurchase">
-<div class="cardTitle">采购物资</div>
-<div class="cardDesc">补充库存，可能遇到黑市与熟人</div>
-<div class="cardMeta">不消耗 AP</div>
-</button>
-<button class="card" id="actExplore">
-<div class="cardTitle">主动探索</div>
-<div class="cardDesc">前往周边区域搜集物资与情报</div>
-<div class="cardMeta">消耗 1 AP</div>
-</button>
-<button class="card" id="actSearch">
-<div class="cardTitle">外出搜索</div>
-<div class="cardDesc">沿着熟悉的路线搜物资，可能遇到熟人</div>
-<div class="cardMeta">消耗 1 AP</div>
-</button>
-<button class="card" id="actTreat">
-<div class="cardTitle">治疗伤员</div>
-<div class="cardDesc">消耗医疗包换取收益与关系</div>
-<div class="cardMeta">消耗 1 AP</div>
-</button>
-<button class="card soft" id="actRest">
-<div class="cardTitle">休息 / 结束当天</div>
-<div class="cardDesc">进入下一天，AP 充满，触发夜间结算</div>
-<div class="cardMeta">不消耗 AP</div>
-</button>
-</div>
-<div class="tips">
-<div class="tipTitle">甜系节奏</div>
-<div class="tipText">
-            恋爱/角色剧情更密，但经营仍是主线。每次消耗 1 AP 都会触发一次事件；采购物资不消耗 AP 但也可能触发遇见与对话；系统会避免同一角色连续出现，并提供“甜度保底”。
-          </div>
-</div>
-</section>
-<aside class="panel sidePanel">
-<div class="panelTitle">核心物资</div>
-<div class="list">
-<div class="row"><span>医疗包</span><span id="invMedkit">5</span></div>
-<div class="row"><span>军粮</span><span id="invFood">10</span></div>
-<div class="row"><span>弹药</span><span id="invAmmo">10</span></div>
-<div class="row subtle"><span>仓库容量</span><span id="invCap">50</span></div>
-</div>
-<div class="divider"></div>
-<div class="panelTitle">阵营声望</div>
-<div class="list">
-<div class="row"><span>TF141</span><span id="relTF141">10</span></div>
-<div class="row"><span>KorTac</span><span id="relKorTac">10</span></div>
-<div class="row"><span>Ghosts</span><span id="relGhosts">10</span></div>
-<div class="row"><span>Chimera</span><span id="relChimera">10</span></div>
-</div>
-<div class="divider"></div>
-<div class="panelTitle">好感（甜度进度）</div>
-<div class="affList" id="affectionList"></div>
-</aside>
+  <section class="panel logPanel">
+    <div class="panelTitle">终端日志</div>
+    <div class="log" id="log"></div>
+    <div class="eventBox">
+      <div class="eventText" id="eventText"></div>
+      <div class="choices" id="choices"></div>
+    </div>
+  </section>
+  <section class="panel actionsPanel">
+    <div class="panelTitle">日常入口</div>
+    <div class="cards">
+      <button class="card" id="actDaily">
+        <div class="cardTitle">日常主线</div>
+        <div class="cardDesc">走进值班室、走廊与食堂的小事，推动关系日常化</div>
+        <div class="cardMeta">轻松节奏</div>
+      </button>
+      <button class="card" id="actTurbulence">
+        <div class="cardTitle">小波澜</div>
+        <div class="cardDesc">设备故障、临时换班、雨夜门口等小插曲</div>
+        <div class="cardMeta">轻张力</div>
+      </button>
+      <button class="card soft" id="actNextDay">
+        <div class="cardTitle">进入下一天</div>
+        <div class="cardDesc">写下当日总结，体力恢复</div>
+        <div class="cardMeta">DAY +1</div>
+      </button>
+    </div>
+    <div class="tips">
+      <div class="tipTitle">今日节奏</div>
+      <div class="tipText" id="tipText">每天会先触发一次随机事件，再进入日常主线或小波澜。</div>
+    </div>
+  </section>
+  <aside class="panel sidePanel">
+    <div class="panelTitle">随身物品</div>
+    <div class="list">
+      <div class="row"><span>热茶包</span><span id="itemTea">1</span></div>
+      <div class="row"><span>小零食</span><span id="itemSnack">2</span></div>
+      <div class="row"><span>薄毯</span><span id="itemBlanket">1</span></div>
+      <div class="row"><span>工具盒</span><span id="itemToolkit">0</span></div>
+      <div class="row"><span>门卡</span><span id="itemKeycard">0</span></div>
+    </div>
+    <div class="divider"></div>
+    <div class="panelTitle">状态提示</div>
+    <div class="list">
+      <div class="row"><span>男主</span><span id="maleName">沈砚</span></div>
+      <div class="row subtle"><span>当前场景</span><span id="sceneTitle">-</span></div>
+      <div class="row subtle"><span>随机事件</span><span id="dailyEventCount">-</span></div>
+    </div>
+  </aside>
 </main>
 <footer class="footer">
-<span>Demo：你可以直接往事件池里加剧情对象，不需要改引擎逻辑。</span>
+  <span>Demo：你可以直接在事件池里加剧情对象，不需要改引擎逻辑。</span>
 </footer>
 </div>
 <script>
 (function(){
-  var __memStore = {};
-  function safeGet(k){
-    try { return window.localStorage ? window.localStorage.getItem(k) : __memStore[k]; }
-    catch(e){ return __memStore[k]; }
-  }
-  function safeSet(k,v){
-    try { if (window.localStorage) { window.localStorage.setItem(k, v); return; } }
-    catch(e){}
-    __memStore[k] = v;
-  }
-  function safeRemove(k){
-    try { if (window.localStorage) { window.localStorage.removeItem(k); return; } }
-    catch(e){}
-    try { delete __memStore[k]; } catch(e){}
-  }
-  window.__safeStorage = { getItem: safeGet, setItem: safeSet, removeItem: safeRemove };
-
-  function showError(msg){
-    try{
-      var el = document.getElementById("jsError");
-      if (!el) return;
-      el.style.display = "block";
-      el.textContent = msg;
-    }catch(e){}
-  }
-  window.onerror = function(message, source, lineno, colno, error){
-    var s = "脚本发生错误，导致按钮点不动。\n\n" +
-            "错误信息: " + message + "\n" +
-            "位置: " + (source || "") + " :" + lineno + ":" + colno + "\n\n" +
-            "把这段截图发我，我就能精确修。\n";
-    if (error && error.stack) s += "\n堆栈:\n" + error.stack;
-    showError(s);
-    return true;
-  };
-  document.addEventListener("DOMContentLoaded", function(){
-    var st = document.getElementById("jsStatus");
-    if (st) st.textContent = "JS 已加载";
-  });
-})();
-
-
-(function(){
-try{
-
-
-(function(){
-  function ensureDebugPanel(){
-    var p = document.getElementById("debugPanel");
-    if (p) return p;
-    p = document.createElement("div");
-    p.id = "debugPanel";
-    p.style.position = "fixed";
-    p.style.left = "10px";
-    p.style.right = "10px";
-    p.style.bottom = "10px";
-    p.style.maxHeight = "40vh";
-    p.style.overflow = "auto";
-    p.style.padding = "10px";
-    p.style.background = "rgba(10,12,16,.92)";
-    p.style.color = "#d8e2ff";
-    p.style.font = "12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial";
-    p.style.border = "1px solid rgba(216,226,255,.25)";
-    p.style.borderRadius = "12px";
-    p.style.display = "none";
-    p.style.zIndex = "99999";
-    p.innerHTML = "<div style='display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px;'><strong>调试面板</strong><button id='dbgClose' style='padding:6px 10px;border-radius:10px;border:1px solid rgba(216,226,255,.25);background:transparent;color:#d8e2ff;'>关闭</button></div><pre id='dbgText' style='white-space:pre-wrap;margin:0;'></pre>";
-    document.body.appendChild(p);
-    var c = document.getElementById("dbgClose");
-    if (c) c.onclick = function(){ p.style.display = "none"; };
-    return p;
-  }
-  function pushDebug(msg){
-    try{
-      var p = ensureDebugPanel();
-      var t = document.getElementById("dbgText");
-      if (!t) return;
-      t.textContent += msg + "
-";
-    }catch(e){}
-  }
-  window.__WZ_DEBUG = pushDebug;
-  window.addEventListener("error", function(ev){
-    var m = "[JS错误] " + (ev.message || "") + " @ " + (ev.filename || "") + ":" + (ev.lineno || 0) + ":" + (ev.colno || 0);
-    pushDebug(m);
-    try{ ensureDebugPanel().style.display = "block"; }catch(e){}
-  });
-  window.addEventListener("unhandledrejection", function(ev){
-    var m = "[Promise错误] " + String(ev.reason || ev);
-    pushDebug(m);
-    try{ ensureDebugPanel().style.display = "block"; }catch(e){}
-  });
-})();
-
-
-// 事件库（上下文版本）
-// context: shop | purchase | explore | search | treat | night
-// type: romance | business | faction | stranger
-
-try{
-  var __ue = loadUserEvents();
-  if (__ue && __ue.length){
-    for (var i=0;i<__ue.length;i++) EVENTS.push(__ue[i]);
-  }
-}catch(e){}
-
-const ACTORS = [
-  { key: "simon",   name: "西蒙" },
-  { key: "keegan",  name: "基根" },
-  { key: "konig",   name: "柯尼格" },
-  { key: "price",   name: "普莱斯" },
-  { key: "krueger", name: "克鲁格" },
-];
-
-// 阶段：20% 路人（更低也算路人）→ 30% 熟人 → 50% 在意 → 70% 暗恋 → 100% 忍不住表白
-function affectionStage(v){
-  if (v >= 100) return "忍不住表白";
-  if (v >= 70)  return "暗恋";
-  if (v >= 50)  return "在意";
-  if (v >= 30)  return "熟人";
-  return "路人";
-}
-
-function clamp01(n){ return Math.max(0, Math.min(100, n)); }
-const EVENT_POOLS = {
-  shop: [],
-  purchase: [],
-  explore: [],
-  search: [],
-  treat: [],
-  night: [],
-};
-
-// ---------- 工具：创建事件 ----------
-function E(evt){ return evt; }
-
-// ---------- 恋爱事件（甜系安全感） ----------
-const romance = [
-  // Simon
-
-  E({
-    id: "simon_shop_hello",
-    type: "romance",
-    actor: "simon",
-    context: ["shop","night"],
-    weight: 11,
-    cooldown: 1,
-    when: (s) => (((s.affection.simon)!=null ? (s.affection.simon) : (0))) < 30,
-    text: [
-      "西蒙站在门口没立刻进来，他先扫了一圈周围才把视线落回你身上，声音压得很低：
-西蒙：你在这儿？
-你：嗯，我在。
-他像是终于把心放下去一点：
-西蒙：别让灯熄，听见了吗。",
-      "你正把杯子放回架子，门外传来极轻的敲击声，西蒙的声音隔着门板却很稳：
-西蒙：是我。
-你开门时他只说一句：
-西蒙：我路过，来确认你没事。
-你：我好好的。
-他点头，像把这句话收进胸口：
-西蒙：好。那就好。"
-    ],
-    choices: [
-      { label: "给他倒一杯热水（+好感，+温度）",
-        apply: (s) => { s.affection.simon = (((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 6; s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 4); },
-        result: [
-          "你把杯子推过去，他握住杯壁的动作很慢，像怕把这点热弄碎了：
-西蒙：谢了。你做得很好。",
-          "他接过水时手指很轻，你听见他把气吐出来一点点：
-西蒙：别硬撑。你不需要证明什么。"
-        ]
-      },
-      { label: "让他顺手帮你检查门闩（+好感，+安全感）",
-        apply: (s) => { s.affection.simon = (((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 4; s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 6); },
-        result: [
-          "他走到门边，指节在门闩上敲了一下，像在给你一个确定：
-西蒙：现在稳了。你安心做事。",
-          "他把门闩扣好，回头看你一眼，目光很短却很重：
-西蒙：只要我还在，你就不会被人随便碰到。"
-        ]
-      }
-    ]
-  }),
-
-  E({
-    id: "simon_search_beacon",
-    type: "romance",
-    actor: "simon",
-    context: ["search"],
-    weight: 12,
-    cooldown: 1,
-    when: (s) => true,
-    text: [
-      "你外出搜索时，耳机里忽然响起西蒙的低声：
-西蒙：别走太远。
-你：我就在你给的线里。
-他停了半秒，像把情绪压回去：
-西蒙：回来的时候喊一声，我来接你。",
-      "你刚在墙角做完标记，就听见西蒙短促的呼叫：
-西蒙：风向变了，换条路。
-你：收到。
-他没多说，但你听得出来那不是命令，是担心被他硬生生掐住。"
-    ],
-    choices: [
-      { label: "按他的路线回去（+好感，+安全感）",
-        apply: (s) => { s.affection.simon = (((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 5; s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 5); },
-        result: [
-          "你回到站点时，他已经在门口的阴影里等着，像把“你回来”当成一件必须亲手确认的事：
-西蒙：进来。外面冷。",
-          "他没碰你，只把门替你挡住风，声音更低：
-西蒙：做得对。活着回来才算数。"
-        ]
-      },
-      { label: "逞强多搜一点（+库存，-温度）",
-        apply: (s) => { addInv("food", 1); s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) - 3); },
-        result: [
-          "你多拎回一袋军粮，却听见他那声“啧”像刀背轻轻刮过：
-西蒙：下次别这样。你比那点东西重要。",
-          "他没骂你，只沉默地把你背包接过去，像在替你把风险也一并扛走：
-西蒙：我会补上，不用你拿命换。"
-        ]
-      }
-    ]
-  }),
-
-  // Keegan
-  E({
-    id: "keegan_shop_banter",
-    type: "romance",
-    actor: "keegan",
-    context: ["shop","purchase","night"],
-    weight: 10,
-    cooldown: 1,
-    when: (s) => (((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) < 50,
-    text: [
-      "基根把一小袋糖丢到柜台上，像随手，其实位置刚好是你最顺手的地方：
-基根：别皱眉。补糖。
-你：你怎么总能找到？
-他笑了一下，又很快收住：
-基根：因为我路过的时候，会看你缺什么。",
-      "你整理货架时，基根从门边探头进来：
-基根：今天生意怎么样？
-你：还行。
-他把一个打火机放到你手边：
-基根：那就行。你这里得亮一点，别让自己害怕。"
-    ],
-    choices: [
-      { label: "和他聊两句（+好感）",
-        apply: (s) => { s.affection.keegan = (((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) + 5; },
-        result: [
-          "你随口问他今天巡逻累不累，他却反问得很轻：
-基根：你呢？你累不累？
-那一瞬你突然被“有人把你当回事”击中。",
-          "他听你讲库存，边点头边把缺货记在掌心，像在说：你说的每一句，我都记。"
-        ]
-      },
-      { label: "让他帮你搬两箱（+库存，+好感）",
-        apply: (s) => { addInv("food", 1); s.affection.keegan = (((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) + 3; },
-        result: [
-          "他把箱子放下时声音很轻：
-基根：别客气。你开口的时候，我才放心。",
-          "你看见他手背的擦伤，他却像没事人一样：
-基根：小伤。重要的是你这里别缺。"
-        ]
-      }
-    ]
-  }),
-
-  E({
-    id: "keegan_search_meet",
-    type: "romance",
-    actor: "keegan",
-    context: ["search"],
-    weight: 12,
-    cooldown: 1,
-    when: (s) => true,
-    text: [
-      "你在外出搜索的路口看见基根，他先抬手示意你停一下：
-基根：你一个人？
-你：我就出来绕一圈。
-他看你两秒，像评估你的状态，然后把路线指给你：
-基根：行，那我跟你走一段，省得你踩坑。",
-      "你刚把一袋物资塞进背包，转身就撞上基根的影子：
-基根：别紧张，是我。
-你：你怎么在这？
-他耸耸肩：
-基根：我巡这片。顺便把你捡回去。"
-    ],
-    choices: [
-      { label: "让他陪你走（+好感，+安全感）",
-        apply: (s) => { s.affection.keegan = (((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) + 6; s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 4); },
-        result: [
-          "他把你护在内侧走，语气像闲聊：
-基根：别怕。你在我视线里，就不会出事。",
-          "他走得不快，刻意配合你的步子：
-基根：你不用赶。能回来才是目标。"
-        ]
-      },
-      { label: "把多出来的军粮分他一点（+关系）",
-        apply: (s) => { if ((((s.inv.food)!=null ? (s.inv.food) : (0))) >= 1) s.inv.food -= 1; s.relations.TF141 = (((s.relations.TF141)!=null ? (s.relations.TF141) : (0))) + 1; s.affection.keegan = (((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) + 4; },
-        result: [
-          "他接过的时候嘴上说“你真大方”，但眼神很软：
-基根：谢了。我欠你一顿。",
-          "他把军粮塞进包里，回头冲你笑：
-基根：下次我带更好的。"
-        ]
-      }
-    ]
-  }),
-
-  // Price
-  E({
-    id: "price_shop_tea",
-    type: "romance",
-    actor: "price",
-    context: ["shop","treat","night"],
-    weight: 10,
-    cooldown: 1,
-    when: (s) => (((s.affection.price)!=null ? (s.affection.price) : (0))) < 70,
-    text: [
-      "普莱斯把烟掐灭在门口，像是故意不把味道带进来，他看你一眼，语气很自然：
-普莱斯：姑娘，今天还撑得住？
-你：嗯。
-他点头，像在给你盖章：
-普莱斯：那就好。你要是撑不住，就开口。",
-      "你正给伤员换药，普莱斯站在旁边不插手，只在你手抖了一下时递过新的绷带：
-普莱斯：稳一点。
-你：我没事。
-他低声笑：
-普莱斯：我知道。但你也可以不用总说没事。"
-    ],
-    choices: [
-      { label: "接受他的提醒（+好感，+温度）",
-        apply: (s) => { s.affection.price = (((s.affection.price)!=null ? (s.affection.price) : (0))) + 5; s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 4); },
-        result: [
-          "他把热茶推到你手边：
-普莱斯：喝一口。手暖了，心就不会乱。",
-          "他看你把药扎好，轻声说：
-普莱斯：做得漂亮。你很可靠。"
-        ]
-      },
-      { label: "请他帮你把门口的人劝散（+安全感）",
-        apply: (s) => { s.affection.price = (((s.affection.price)!=null ? (s.affection.price) : (0))) + 3; s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 6); },
-        result: [
-          "他走出去只说了两句话，门口立刻安静下来，他回来时语气不变：
-普莱斯：现在没人敢闹。继续吧。",
-          "他回头瞥你一眼：
-普莱斯：你开店是为了活着，不是为了被他们吓着。记住这一点。"
-        ]
-      }
-    ]
-  }),
-  E({
-    id: "simon_shop_hotwater",
-    type: "romance",
-    actor: "simon",
-    context: ["shop", "purchase"],
-    weight: 12,
-    cooldown: 2,
-    when: (s) => (((s.affection.simon)!=null ? (s.affection.simon) : (0))) < 30 && !s.flags.simon_met,
-    text: [
-      "西蒙：你把热水壶放哪了。
-你：这里，刚烧开。
-（他把净水片推到你指尖旁边，动作很轻，像怕打断你呼吸）
-西蒙：别省。你要先暖着，站点才稳。
-你：……我知道了。
-西蒙：（低声）乖。",
-      "你：今天水好像更浑。
-西蒙：（把打火石和净水片放下）我带了。
-你：你怎么总能想到这些？
-西蒙：我不想你硬扛。
-（他停顿半秒，视线落在你手背）
-西蒙：你在我这儿，不需要逞强。"
-    ],
-    choices: [
-      {
-        label: "把热水壶推过去，让他先暖一暖手（+好感，+温度）",
-        result: [
-      "你把杯子递过去。
-西蒙：（手套贴近杯壁，停了半秒）……够烫。
-你：那你喝。
-西蒙：你先。
-（他说得像命令，却把杯口转到你更顺手的角度）",
-      "你把热水推到他面前。
-西蒙：我晚点喝。
-你：不行。
-西蒙：（嗓音更低）行，听你的。"
-    ],
-        can: () => true,
-        apply: (s) => {
-          s.flags.simon_met = true;
-          s.affection.simon = clamp01((((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 8);
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 5);
-        }
-      },
-      {
-        label: "把净水片收好，认真记下他的提醒（+阵营，+少量好感）",
-        result: [
-      "你把净水片收好。
-你：我记在缺货清单里。
-西蒙：给我。
-你：嗯？
-西蒙：我负责补齐。
-（他的语气很平，像“这本来就该我来”）",
-      "你写下清单。
-西蒙：我看到了。
-你：你要出去？
-西蒙：嗯。
-（他把“别怕”藏在一个很短的点头里）"
-    ],
-        can: () => true,
-        apply: (s) => {
-          s.flags.simon_met = true;
-          s.affection.simon = clamp01((((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 4);
-          s.relations.TF141 = (((s.relations.TF141)!=null ? (s.relations.TF141) : (0))) + 2;
-        }
-      },
-    ]
-  }),
-
-  E({
-    id: "simon_explore_radio",
-    type: "romance",
-    actor: "simon",
-    context: ["explore"],
-    weight: 10,
-    cooldown: 1,
-    when: (s) => (((s.affection.simon)!=null ? (s.affection.simon) : (0))) >= 30 && (((s.affection.simon)!=null ? (s.affection.simon) : (0))) < 70,
-    text: "你刚离开站点边缘去取回遗漏物资，无线电里就响起西蒙的短促呼叫，他没有问你在做什么，只让你确认一段路线的安全角度，等你回到门口时，他已经站在阴影里，像是把“你平安回来”当成当天最重要的结算。",
-    choices: [
-      {
-        label: "把刚拿回来的小零食分他一半（+好感，+温度）",
-        can: () => true,
-        apply: (s) => {
-          s.affection.simon = clamp01((((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 6);
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 4);
-        }
-      },
-      {
-        label: "把站点缺货清单递给他（+现金，下次补货更顺）",
-        can: () => true,
-        apply: (s) => {
-          s.affection.simon = clamp01((((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 4);
-          s.cash += 80;
-          s.flags.shopping_list_ready = true;
-        }
-      }
-    ]
-  }),
-
-  E({
-    id: "simon_night_blanket",
-    type: "romance",
-    actor: "simon",
-    context: ["night"],
-    weight: 9,
-    cooldown: 3,
-    when: (s) => (((s.affection.simon)!=null ? (s.affection.simon) : (0))) >= 50 && !s.flags.simon_blanket,
-    text: "你核对库存核得有点久，肩膀发酸时才发现椅背上多了一条折得很整齐的毯子，边角压着一张纸条，字很少却很笃定：别硬扛，困了就睡，门我看着。",
-    choices: [
-      {
-        label: "把毯子抱在怀里回一句“收到”（+好感，触发后续）",
-        can: () => true,
-        apply: (s) => {
-          s.flags.simon_blanket = true;
-          s.affection.simon = clamp01((((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 9);
-          s.flags.simon_followup_note = true;
-        }
-      },
-      {
-        label: "明早留一杯热的给他（+温度，+好感）",
-        can: () => true,
-        apply: (s) => {
-          s.flags.simon_blanket = true;
-          s.affection.simon = clamp01((((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 7);
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 6);
-        }
-      }
-    ]
-  }),
-
-  E({
-    id: "simon_shop_confess",
-    type: "romance",
-    actor: "simon",
-    context: ["shop", "treat"],
-    weight: 6,
-    cooldown: 4,
-    when: (s) => (((s.affection.simon)!=null ? (s.affection.simon) : (0))) >= 70 && (((s.affection.simon)!=null ? (s.affection.simon) : (0))) < 100 && !s.flags.simon_confessed,
-    text: "你只是随口说今天有点累，西蒙的目光就停在你脸上停得太久，像是在确认你每一口呼吸都还稳，他最终把手套摘下来，指腹很轻地碰了碰你手背，语气依旧克制却藏不住那种偏执的在意：你别把自己放到最后，我忍不住。",
-    choices: [
-      {
-        label: "把手翻过去握住他（+好感大量，达成表白）",
-        can: () => true,
-        apply: (s) => {
-          s.affection.simon = clamp01((((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 20);
-          if ((((s.affection.simon)!=null ? (s.affection.simon) : (0))) >= 100) s.flags.simon_confessed = true;
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 8);
-        }
-      },
-      {
-        label: "让他坐下休息一会儿，你先把今晚过完（+温度，+好感）",
-        can: () => true,
-        apply: (s) => {
-          s.affection.simon = clamp01((((s.affection.simon)!=null ? (s.affection.simon) : (0))) + 12);
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 10);
-        }
-      }
-    ]
-  }),
-
-  // Keegan
-  E({
-    id: "keegan_shop_note",
-    type: "romance",
-    actor: "keegan",
-    context: ["shop"],
-    weight: 11,
-    cooldown: 1,
-    when: (s) => (((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) < 50,
-    text: [
-      "（你在贴标签，收银台下被塞进一张纸条）
-纸条：别紧张，今天我在这片巡一圈。
-你：（抬头只看见基根背影）你这也太幼稚了。
-（你把纸条折好塞进口袋，嘴角却忍不住弯了一下）",
-      "你：（发现纸条）“别怕，我在。”
-你：……
-（你抬头时，基根刚好路过，装作没事人一样吹了声口哨）
-基根：咳，老板娘，生意兴隆啊。"
-    ],
-    choices: [
-      {
-        label: "回一张更可爱的纸条（+好感，+温度）",
-        result: [
-      "你回了纸条。
-（不久后，他把一袋小零碎放到你手边）
-基根：路上顺手捡的，你用得上。
-你：你就不能直接说你担心我？
-基根：（笑）我这不就在做吗。",
-      "你塞回一张纸条。
-你：别太累。
-（他看了一眼，指尖在纸角敲了敲）
-基根：收到。"
-    ],
-        can: () => true,
-        apply: (s) => {
-          s.affection.keegan = clamp01((((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) + 7);
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 3);
-        }
-      },
-      {
-        label: "当没看见，专心把店开起来（+现金，小幅好感）",
-        result: [
-      "你把纸条当作没看见。
-（但门口的脚步声变得更规律了）
-你：（心里）行吧，算你有心。",
-      "你继续忙。
-（下一次抬头，你看见他站在阴影里，视线一直在你这儿）
-你：……傻子。"
-    ],
-        can: () => true,
-        apply: (s) => {
-          s.affection.keegan = clamp01((((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) + 3);
-          s.cash += 60;
-        }
-      }
-    ]
-  }),
-
-  E({
-    id: "keegan_explore_escort",
-    type: "romance",
-    actor: "keegan",
-    context: ["explore"],
-    weight: 9,
-    cooldown: 2,
-    when: (s) => (((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) >= 30,
-    text: "你在废墟边缘翻找物资时，基根的身影像是一直在你视线外的安全距离，他不催你，也不抢你的决定，只在你要转弯时轻声提醒你脚下的碎玻璃，像把你的安全当成默认任务。",
-    choices: [
-      {
-        label: "听他的慢一点走（+温度，少量收益）",
-        can: () => true,
-        apply: (s) => {
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 5);
-          s.cash += 30;
-          s.affection.keegan = clamp01((((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) + 5);
-        }
-      },
-      {
-        label: "把找到的备用零件给他记一笔（+阵营，+好感）",
-        can: () => true,
-        apply: (s) => {
-          s.relations.Ghosts = (((s.relations.Ghosts)!=null ? (s.relations.Ghosts) : (0))) + 2;
-          s.affection.keegan = clamp01((((s.affection.keegan)!=null ? (s.affection.keegan) : (0))) + 6);
-        }
-      }
-    ]
-  }),
-
-  // König
-  E({
-    id: "konig_purchase_extra_bandage",
-    type: "romance",
-    actor: "konig",
-    context: ["purchase"],
-    weight: 11,
-    cooldown: 2,
-    when: (s) => (((s.affection.konig)!=null ? (s.affection.konig) : (0))) < 50,
-    text: "你在采购清单上划掉最后一项时，柯尼格把一包你没写上去的绷带推到你面前，他没有解释自己怎么知道你缺这个，只像在完成一次再普通不过的交接，但你能从他的停顿里听出一种把你放在优先级里的谨慎。",
-    choices: [
-      {
-        label: "收下绷带，给他倒一杯热水（+好感，+温度）",
-        can: () => true,
-        apply: (s) => {
-          s.affection.konig = clamp01((((s.affection.konig)!=null ? (s.affection.konig) : (0))) + 7);
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 4);
-        }
-      },
-      {
-        label: "用现金补齐差价，保持交易边界（-现金，+少量好感）",
-        can: (s) => (((s.cash)!=null ? (s.cash) : (0))) >= 40,
-        apply: (s) => {
-          s.cash -= 40;
-          s.affection.konig = clamp01((((s.affection.konig)!=null ? (s.affection.konig) : (0))) + 4);
-        }
-      }
-    ]
-  }),
-
-  E({
-    id: "konig_night_dim_lights",
-    type: "romance",
-    actor: "konig",
-    context: ["night", "shop"],
-    weight: 8,
-    cooldown: 3,
-    when: (s) => (((s.affection.konig)!=null ? (s.affection.konig) : (0))) >= 30 && !s.flags.konig_lights,
-    text: "你站点的灯在夜里显得有点亮，柯尼格把遮光布递给你，然后帮你把角度调到刚好够你看清账本却不会把你暴露在远处的视线里，他做完这一切才说这样你会更安全，因为他不希望你因为一盏灯而承担不该承担的风险。",
-    choices: [
-      {
-        label: "听他的，切换为“安全灯光”（+温度，降低事故概率）",
-        can: () => true,
-        apply: (s) => {
-          s.flags.konig_lights = true;
-          s.flags.safety_lighting = true;
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 7);
-          s.affection.konig = clamp01((((s.affection.konig)!=null ? (s.affection.konig) : (0))) + 5);
-        }
-      },
-      {
-        label: "坚持亮一点方便做生意（+现金，-少量温度）",
-        can: () => true,
-        apply: (s) => {
-          s.cash += 70;
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) - 3);
-          s.affection.konig = clamp01((((s.affection.konig)!=null ? (s.affection.konig) : (0))) + 3);
-        }
-      }
-    ]
-  }),
-
-  // Price
-  E({
-    id: "price_shop_message_board",
-    type: "romance",
-    actor: "price",
-    context: ["shop", "treat"],
-    weight: 10,
-    cooldown: 2,
-    when: (s) => (((s.affection.price)!=null ? (s.affection.price) : (0))) < 50 && !s.flags.price_message,
-    text: "你刚把留言板挂好，普莱斯把一支笔放到板下的绳子上，他看了看你忙碌的手势，提醒你把缺货写出来别靠硬记，末了补一句，语气不像命令，更像笃定：你撑得很好，但你不该一个人撑。",
-    choices: [
-      {
-        label: "把缺货清单写出来请他顺路带回（+阵营，+好感）",
-        can: () => true,
-        apply: (s) => {
-          s.flags.price_message = true;
-          s.flags.shopping_list_ready = true;
-          s.relations.TF141 = (((s.relations.TF141)!=null ? (s.relations.TF141) : (0))) + 2;
-          s.affection.price = clamp01((((s.affection.price)!=null ? (s.affection.price) : (0))) + 6);
-        }
-      },
-      {
-        label: "说你能搞定，但把笔留下（+温度，+少量好感）",
-        can: () => true,
-        apply: (s) => {
-          s.flags.price_message = true;
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 4);
-          s.affection.price = clamp01((((s.affection.price)!=null ? (s.affection.price) : (0))) + 4);
-        }
-      }
-    ]
-  }),
-
-  E({
-    id: "price_night_schedule",
-    type: "romance",
-    actor: "price",
-    context: ["night"],
-    weight: 7,
-    cooldown: 3,
-    when: (s) => (((s.affection.price)!=null ? (s.affection.price) : (0))) >= 50,
-    text: "结算前的风总是最冷的，普莱斯站在门口扫过货架与药柜，像是在把你的安全一项项点名确认，他没说太多温柔话，却把明天巡逻时间和你应该关门的时间安排得很清楚，让你听着就知道今晚能睡得踏实。",
-    choices: [
-      {
-        label: "接受安排，提前结束营业（+温度，-少量现金）",
-        can: () => true,
-        apply: (s) => {
-          s.cash = Math.max(0, (((s.cash)!=null ? (s.cash) : (0))) - 30);
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 8);
-          s.affection.price = clamp01((((s.affection.price)!=null ? (s.affection.price) : (0))) + 6);
-          s.flags.early_close = true;
-        }
-      },
-      {
-        label: "坚持多开一会儿，但保证按路线回屋（+现金，+好感）",
-        can: () => true,
-        apply: (s) => {
-          s.cash += 60;
-          s.affection.price = clamp01((((s.affection.price)!=null ? (s.affection.price) : (0))) + 5);
-          s.flags.safe_route = true;
-        }
-      }
-    ]
-  }),
-
-  // Krueger
-  E({
-    id: "krueger_shop_shelf",
-    type: "romance",
-    actor: "krueger",
-    context: ["shop", "treat"],
-    weight: 10,
-    cooldown: 2,
-    when: (s) => (((s.affection.krueger)!=null ? (s.affection.krueger) : (0))) < 50,
-    text: "你一回头就发现货架被人悄无声息整理过了，弹药与医疗包摆放得更顺手，像是有人把你的习惯当成重要情报来记，克鲁格靠墙站着，开口很平静，说这样你拿东西会更快，而你快一点就少一点慌。",
-    choices: [
-      {
-        label: "让他留下喝口热的再走（+好感，+温度）",
-        can: () => true,
-        apply: (s) => {
-          s.affection.krueger = clamp01((((s.affection.krueger)!=null ? (s.affection.krueger) : (0))) + 7);
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 3);
-        }
-      },
-      {
-        label: "把整理方式写进“站点流程”（+经营增益flag）",
-        can: () => true,
-        apply: (s) => {
-          s.affection.krueger = clamp01((((s.affection.krueger)!=null ? (s.affection.krueger) : (0))) + 4);
-          s.flags.sop_shelf = true;
-        }
-      }
-    ]
-  }),
-
-  E({
-    id: "krueger_purchase_gloves",
-    type: "romance",
-    actor: "krueger",
-    context: ["purchase"],
-    weight: 7,
-    cooldown: 3,
-    when: (s) => (((s.affection.krueger)!=null ? (s.affection.krueger) : (0))) >= 30 && !s.flags.krueger_gloves,
-    text: "你手指被纸箱边缘磨得发红，克鲁格把一副尺寸刚好的备用手套放到你手边，解释很短，说你要是伤到手，站点效率会下降，而他不喜欢看到你因为这种事难受。",
-    choices: [
-      {
-        label: "戴上手套继续干活（+好感，+温度）",
-        can: () => true,
-        apply: (s) => {
-          s.flags.krueger_gloves = true;
-          s.affection.krueger = clamp01((((s.affection.krueger)!=null ? (s.affection.krueger) : (0))) + 8);
-          s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 4);
-        }
-      },
-      {
-        label: "放慢节奏，把今天留一点给自己（+一次性AP奖励）",
-        can: () => true,
-        apply: (s) => {
-          s.flags.krueger_gloves = true;
-          s.affection.krueger = clamp01((((s.affection.krueger)!=null ? (s.affection.krueger) : (0))) + 5);
-          s.ap = Math.min((((s.apMax)!=null ? (s.apMax) : (3))), (((s.ap)!=null ? (s.ap) : (0))) + 1);
-        }
-      }
-    ]
-  }),
-];
-
-// ---------- 经营/治疗/随机路人 ----------
-const business = [
-  E({
-    id: "biz_shop_regular",
-    type: "business",
-    context: ["shop"],
-    weight: 12,
-    text: "一个回头客把零钱摊在柜台上，说你这儿的货摆得整齐，让人心里踏实，他想多买一点当作备用。",
-    choices: [
-      { label: "给他打个小折扣换口碑（+温度，+现金）",
-        can: () => true,
-        apply: (s) => { s.cash += 70; s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 2); } },
-      { label: "按原价出售，顺便提示他别囤太多（+现金）",
-        can: () => true,
-        apply: (s) => { s.cash += 90; } },
-    ]
-  }),
-  E({
-    id: "biz_purchase_price_spike",
-    type: "business",
-    context: ["purchase"],
-    weight: 10,
-    text: "黑市价格突然上浮，你能补满库存，但会花掉更多现金。",
-    choices: [
-      { label: "咬牙补货（-现金，+库存）",
-        can: (s) => (((s.cash)!=null ? (s.cash) : (0))) >= 120,
-        apply: (s) => { s.cash -= 120; s.inv.food += 2; s.inv.medkit += 1; } },
-      { label: "只买最紧缺的（-现金，+少量库存）",
-        can: (s) => (((s.cash)!=null ? (s.cash) : (0))) >= 60,
-        apply: (s) => { s.cash -= 60; s.inv.food += 1; } },
-    ]
-  }),
-  E({
-    id: "biz_treat_wounded",
-    type: "business",
-    context: ["treat"],
-    weight: 12,
-    text: "一名伤员被送到门口，呼吸急促，伤情需要你当场决定处理方式。",
-    choices: [
-      { label: "使用 1 医疗包紧急处理（-医疗包，+现金，+阵营）",
-        can: (s) => (((s.inv.medkit)!=null ? (s.inv.medkit) : (0))) >= 1,
-        apply: (s) => { s.inv.medkit -= 1; s.cash += 140; s.relations.TF141 = (((s.relations.TF141)!=null ? (s.relations.TF141) : (0))) + 1; } },
-      { label: "先观察再决定（埋下后续）",
-        can: () => true,
-        apply: (s) => { s.flags.pending_wound = true; } },
-    ]
-  }),
-  E({
-    id: "biz_explore_find_tools",
-    type: "business",
-    context: ["explore"],
-    weight: 10,
-    text: "你在废弃的货架后找到一套还能用的工具，拿回去能让站点整理更顺手。",
-    choices: [
-      { label: "带回站点（+温度，+少量现金）",
-        can: () => true,
-        apply: (s) => { s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 4); s.cash += 40; s.flags.tools_found = true; } },
-      { label: "留在原地换取轻装（+现金）",
-        can: () => true,
-        apply: (s) => { s.cash += 70; } },
-    ]
-  }),
-];
-
-const faction = [
-  E({
-    id: "fac_explore_checkpoint",
-    type: "faction",
-    context: ["explore"],
-    weight: 9,
-    text: "前方临时检查点增加盘查频率，你可以绕路更安全，但会少带回一点东西。",
-    choices: [
-      { label: "绕路（+温度，-收益）",
-        can: () => true,
-        apply: (s) => { s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 3); s.cash += 20; } },
-      { label: "硬闯时间窗口（+收益，-温度）",
-        can: () => true,
-        apply: (s) => { s.cash += 90; s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) - 4); } },
-    ]
-  }),
-  E({
-    id: "fac_shop_patrol_pass",
-    type: "faction",
-    context: ["shop"],
-    weight: 7,
-    text: "巡逻队来确认站点资质，手续不麻烦，但你需要递交一份补给流转记录。",
-    choices: [
-      { label: "递交完整记录（-时间，+阵营，+温度）",
-        can: () => true,
-        apply: (s) => { s.relations.TF141 = (((s.relations.TF141)!=null ? (s.relations.TF141) : (0))) + 2; s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 2); } },
-      { label: "用现金打点快速通过（-现金，+阵营）",
-        can: (s) => (((s.cash)!=null ? (s.cash) : (0))) >= 50,
-        apply: (s) => { s.cash -= 50; s.relations.KorTac = (((s.relations.KorTac)!=null ? (s.relations.KorTac) : (0))) + 1; } },
-    ]
-  }),
-];
-
-const stranger = [
-  E({
-    id: "str_shop_lost_recruit",
-    type: "stranger",
-    context: ["shop", "treat"],
-    weight: 12,
-    text: [
-      "新兵：我、我想买点吃的……
-你：先把气喘匀。
-（他攥着背包带，指节发白）
-你：不急，这里不会赶你走。
-新兵：（声音小得快被风吹走）……谢谢。",
-      "你：你迷路了？
-新兵：是……我找不到补给点。
-你：先吃点东西，喝口热的。
-（你把军粮和热水递过去，他肩膀一下就松了）"
-    ],
-    choices: [
-      { label: "给他一份军粮并教他怎么保暖（-军粮，+温度）",
-        result: [
-      "你：把衣领收紧，手套塞进袖口。
-新兵：是！
-你：慢点走，别逞强。
-（他点头点得很用力，像把你的叮嘱当成命令）",
-      "你：吃完再走。
-新兵：……真的可以吗？
-你：可以。
-（他眼眶有点红，却拼命不让自己失态）"
-    ],
-        can: (s) => (((s.inv.food)!=null ? (s.inv.food) : (0))) >= 1,
-        apply: (s) => { s.inv.food -= 1; s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 5); } },
-      { label: "按规矩卖给他（+现金）",
-        result: [
-      "你按规矩卖给他。
-新兵：（认真数零钱）我会记住这里的。
-你：记住就好。
-（他走时回头看了你一眼，像在找一盏灯）",
-      "你：东西在这。
-新兵：谢谢……
-（他匆匆走了，风又灌进来，但你把灯拧亮了一点）"
-    ],
-        can: () => true,
-        apply: (s) => { s.cash += 40; } },
-    ]
-  }),
-  E({
-    id: "str_purchase_kind_merchant",
-    type: "stranger",
-    context: ["purchase"],
-    weight: 10,
-    text: "一个看起来很会做生意的路人商贩悄悄告诉你，他手里有一批“干净货”，价格不低，但质量可靠。",
-    choices: [
-      { label: "买 1 医疗包（-现金，+医疗包）",
-        can: (s) => (((s.cash)!=null ? (s.cash) : (0))) >= 90,
-        apply: (s) => { s.cash -= 90; s.inv.medkit += 1; } },
-      { label: "只买 2 份军粮（-现金，+军粮）",
-        can: (s) => (((s.cash)!=null ? (s.cash) : (0))) >= 50,
-        apply: (s) => { s.cash -= 50; s.inv.food += 2; } },
-    ]
-  }),
-  E({
-    id: "str_explore_old_radio",
-    type: "stranger",
-    context: ["explore"],
-    weight: 9,
-    text: "你在一堆废弃杂物里摸到一台老旧收音机，外壳磨损得厉害，但还能发出微弱的电流声，带回去会让站点更像个有人守着的地方。",
-    choices: [
-      { label: "带回站点（+温度，解锁夜间小事件）",
-        can: () => true,
-        apply: (s) => { s.comfort = clamp01((((s.comfort)!=null ? (s.comfort) : (50))) + 8); s.flags.old_radio = true; } },
-      { label: "卖给路边收货的人（+现金）",
-        can: () => true,
-        apply: (s) => { s.cash += 100; } },
-    ]
-  }),
-];
-
-// 把事件按 context 分发
-const all = [...romance, ...business, ...faction, ...stranger];
-for (const ev of all){
-  for (const ctx of ev.context || []){
-    EVENT_POOLS[ctx].push(ev);
-  }
-}
-
-
-
-const $ = (id) => document.getElementById(id);
-
-const el = {
-  day: $("day"),
-  ap: $("ap"),
-  apMax: $("apMax"),
-  cash: $("cash"),
-  comfort: $("comfort"),
-  log: $("log"),
-  eventText: $("eventText"),
-  choices: $("choices"),
-  invMedkit: $("invMedkit"),
-  invFood: $("invFood"),
-  invAmmo: $("invAmmo"),
-  invCap: $("invCap"),
-  relTF141: $("relTF141"),
-  relKorTac: $("relKorTac"),
-  relGhosts: $("relGhosts"),
-  relChimera: $("relChimera"),
-  affectionList: $("affectionList"),
-  btnNew: $("btnNew"),
-  btnSave: $("btnSave"),
-  btnResetBest: $("btnResetBest"),
-  actShop: $("actShop"),
-  actPurchase: $("actPurchase"),
-  actExplore: $("actExplore"),
-  actSearch: $("actSearch"),
-  actTreat: $("actTreat"),
-  actRest: $("actRest"),
-};
-
-const SAVE_KEY = "warzone_station_save_v1";
-
-function rAll(s, find, rep){
-  return String(s).split(find).join(rep);
-}
-function fmt(str){
-  if (!str) return "";
-  var s = String(str);
-  s = rAll(s, "{player}", state.player || "你");
-  s = rAll(s, "{day}", String(state.day));
-  s = rAll(s, "{comfort}", String((state.comfort!=null?state.comfort:50)));
-  return s;
-}
-function pickText(t){
-  if (Array.isArray(t) && t.length){
-    return t[Math.floor(Math.random() * t.length)];
-  }
-  return t;
-}
-
-function nowTime(){
-  const d = new Date();
-  const hh = String(d.getHours()).padStart(2,"0");
-  const mm = String(d.getMinutes()).padStart(2,"0");
-  return `${hh}:${mm}`;
-}
-
-function clamp01(n){ return Math.max(0, Math.min(100, n)); }
-
-function defaultState(){
-  return {
-    player: "serren",
-    day: 1,
-    apMax: 3,
-    ap: 3,
-    cash: 800,
-    comfort: 50,
-    inv: { medkit: 5, food: 10, ammo: 10, cap: 50 },
-    relations: { TF141: 10, KorTac: 10, Ghosts: 10, Chimera: 10 },
-    affection: { simon: 0, keegan: 0, konig: 0, price: 0, krueger: 0 },
-    flags: {},
-    // 事件节奏控制
-    cooldowns: {},          // eventId -> remaining triggers
-    recentActors: [],       // last N actors from romance events
-    noRomanceStreak: 0,     // 连续未抽到恋爱事件次数
-    log: [],
-  };
-}
-
-function addInv(key, delta){
-  const cap = ((state.inv.cap)!=null ? (state.inv.cap) : (9999));
-  const cur = ((state.inv[key])!=null ? (state.inv[key]) : (0));
-  let next = cur + delta;
-  if (next < 0) next = 0;
-  if (next > cap) next = cap;
-  state.inv[key] = next;
-}
-function actorName(key){
-  const a = ACTORS.find(x => x.key === key);
-  return a ? a.name : key;
-}
-
-var USER_EVENTS_KEY = "WZ_USER_EVENTS_V1";
-
-function normalizeUserEvent(raw){
-  // Accept {id, context, actor, type, minAff, maxAff, text, choices}
-  var ev = {};
-  ev.id = raw.id || ("user_" + Math.random().toString(16).slice(2));
-  ev.type = raw.type || (raw.actor ? "romance" : "stranger");
-  ev.context = raw.context || ["shop"];
-  if (typeof ev.context === "string") ev.context = [ev.context];
-  ev.actor = raw.actor || null;
-  ev.cooldown = raw.cooldown || 0;
-
-  // text can be string or array of strings
-  ev.text = raw.text || "";
-  // conditions
-  ev.when = function(s){
-    if (raw.minAff != null && ev.actor){
-      var v = (s.affection && s.affection[ev.actor] != null) ? s.affection[ev.actor] : 0;
-      if (v < raw.minAff) return false;
-    }
-    if (raw.maxAff != null && ev.actor){
-      var v2 = (s.affection && s.affection[ev.actor] != null) ? s.affection[ev.actor] : 0;
-      if (v2 > raw.maxAff) return false;
-    }
-    return true;
+  const $ = (id) => document.getElementById(id);
+  const el = {
+    day: $("day"),
+    trust: $("trust"),
+    stamina: $("stamina"),
+    chemistry: $("chemistry"),
+    itemsSummary: $("itemsSummary"),
+    log: $("log"),
+    eventText: $("eventText"),
+    choices: $("choices"),
+    itemTea: $("itemTea"),
+    itemSnack: $("itemSnack"),
+    itemBlanket: $("itemBlanket"),
+    itemToolkit: $("itemToolkit"),
+    itemKeycard: $("itemKeycard"),
+    sceneTitle: $("sceneTitle"),
+    dailyEventCount: $("dailyEventCount"),
+    tipText: $("tipText"),
+    btnNew: $("btnNew"),
+    btnSave: $("btnSave"),
+    btnReset: $("btnReset"),
+    actDaily: $("actDaily"),
+    actTurbulence: $("actTurbulence"),
+    actNextDay: $("actNextDay")
   };
 
-  // choices
-  ev.choices = (raw.choices && raw.choices.length) ? raw.choices.map(function(ch){
+  const SAVE_KEY = "taskcard_v03";
+
+  function nowTime(){
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+
+  function clamp(n, min, max){
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function defaultState(){
     return {
-      label: ch.label || "继续",
-      result: ch.result || null,
-      can: function(){ return true; },
-      apply: function(s){
-        if (ch.deltaCash) s.cash += ch.deltaCash;
-        if (ch.deltaComfort) s.comfort = clamp01(((s.comfort!=null)?s.comfort:50) + ch.deltaComfort);
-        if (ch.deltaFood) s.inv.food += ch.deltaFood;
-        if (ch.deltaMed) s.inv.medkit += ch.deltaMed;
-        if (ch.deltaAmmo) s.inv.ammo += ch.deltaAmmo;
-        if (ch.deltaAff && ev.actor){
-          s.affection[ev.actor] = clamp01(((s.affection[ev.actor]!=null)?s.affection[ev.actor]:0) + ch.deltaAff);
-        }
-      }
+      day: 1,
+      dayEventDone: false,
+      daySeed: null,
+      daySummary: "",
+      trust: 5,
+      stamina: 6,
+      chemistry: 0,
+      items: {
+        tea: 1,
+        snack: 2,
+        blanket: 1,
+        toolkit: 0,
+        keycard: 0
+      },
+      flags: {
+        lastSeen: {}
+      },
+      recentDaily: [],
+      recentDailyMain: [],
+      recentTurbulence: [],
+      log: [],
+      currentScene: "dayStart"
     };
-  }) : [
-    {
-      label: "回应一下",
-      result: raw.result || null,
-      apply: function(s){
-        if (ev.actor){
-          s.affection[ev.actor] = clamp01(((s.affection[ev.actor]!=null)?s.affection[ev.actor]:0) + 1);
-          s.comfort = clamp01(((s.comfort!=null)?s.comfort:50) + 1);
+  }
+
+  function loadState(){
+    try{
+      const raw = window.localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw);
+      const base = defaultState();
+      return {
+        ...base,
+        ...saved,
+        items: { ...base.items, ...(saved.items || {}) },
+        flags: { ...base.flags, ...(saved.flags || {}) },
+        recentDaily: Array.isArray(saved.recentDaily) ? saved.recentDaily : [],
+        recentDailyMain: Array.isArray(saved.recentDailyMain) ? saved.recentDailyMain : [],
+        recentTurbulence: Array.isArray(saved.recentTurbulence) ? saved.recentTurbulence : [],
+        log: Array.isArray(saved.log) ? saved.log : [],
+      };
+    }catch(e){
+      return null;
+    }
+  }
+
+  function saveState(){
+    try{
+      window.localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    }catch(e){}
+  }
+
+  function addLine(kind, text){
+    const line = { t: nowTime(), kind, text };
+    state.log.push(line);
+    if (state.log.length > 280) state.log = state.log.slice(-280);
+    appendLine(line);
+  }
+
+  function appendLine(l){
+    const div = document.createElement("div");
+    div.className = `line ${l.kind}`;
+    div.textContent = `[${l.t}] ${l.text}`;
+    el.log.appendChild(div);
+    el.log.scrollTop = el.log.scrollHeight;
+  }
+
+  function renderLog(){
+    el.log.innerHTML = "";
+    state.log.forEach(appendLine);
+    el.log.scrollTop = el.log.scrollHeight;
+  }
+
+  function addSys(text){ addLine("sys", text); }
+  function addEvt(text){ addLine("evt", text); }
+  function addHint(text){ addLine("hint", text); }
+  function addWarn(text){ addLine("warn", text); }
+
+  function itemSummary(){
+    const list = [];
+    if (state.items.tea) list.push(`茶包x${state.items.tea}`);
+    if (state.items.snack) list.push(`零食x${state.items.snack}`);
+    if (state.items.blanket) list.push(`薄毯x${state.items.blanket}`);
+    if (state.items.toolkit) list.push(`工具盒x${state.items.toolkit}`);
+    if (state.items.keycard) list.push(`门卡x${state.items.keycard}`);
+    return list.length ? list.join("、") : "无";
+  }
+
+  function renderHUD(){
+    el.day.textContent = String(state.day);
+    el.trust.textContent = String(state.trust);
+    el.stamina.textContent = String(state.stamina);
+    el.chemistry.textContent = String(state.chemistry);
+    el.itemsSummary.textContent = itemSummary();
+
+    el.itemTea.textContent = String(state.items.tea);
+    el.itemSnack.textContent = String(state.items.snack);
+    el.itemBlanket.textContent = String(state.items.blanket);
+    el.itemToolkit.textContent = String(state.items.toolkit);
+    el.itemKeycard.textContent = String(state.items.keycard);
+
+    el.dailyEventCount.textContent = `${state.dayEventDone ? "已触发" : "未触发"}`;
+  }
+
+  function applyEffects(effects){
+    if (!effects) return { chemistryDelta: 0 };
+    let chemistryDelta = 0;
+    if (effects.trust) state.trust = clamp(state.trust + effects.trust, 0, 100);
+    if (effects.stamina) state.stamina = clamp(state.stamina + effects.stamina, 0, 100);
+    if (effects.chemistry){
+      state.chemistry = clamp(state.chemistry + effects.chemistry, 0, 100);
+      chemistryDelta = effects.chemistry;
+    }
+    if (effects.items){
+      Object.keys(effects.items).forEach((key) => {
+        const cur = Number.isFinite(state.items[key]) ? state.items[key] : 0;
+        state.items[key] = clamp(cur + effects.items[key], 0, 99);
+      });
+    }
+    if (effects.flags){
+      Object.keys(effects.flags).forEach((key) => {
+        state.flags[key] = effects.flags[key];
+      });
+    }
+    return { chemistryDelta };
+  }
+
+  function formatEffectLine(effects){
+    if (!effects) return "";
+    const parts = [];
+    if (effects.trust) parts.push(`信任${effects.trust > 0 ? "+" : ""}${effects.trust}`);
+    if (effects.stamina) parts.push(`体力${effects.stamina > 0 ? "+" : ""}${effects.stamina}`);
+    if (effects.chemistry) parts.push(`张力${effects.chemistry > 0 ? "+" : ""}${effects.chemistry}`);
+    if (effects.items){
+      Object.keys(effects.items).forEach((key) => {
+        const label = itemLabels[key] || key;
+        const val = effects.items[key];
+        parts.push(`${label}${val > 0 ? "+" : ""}${val}`);
+      });
+    }
+    return parts.length ? `（${parts.join(" / ")}）` : "";
+  }
+
+  const itemLabels = {
+    tea: "茶包",
+    snack: "零食",
+    blanket: "薄毯",
+    toolkit: "工具盒",
+    keycard: "门卡"
+  };
+
+  function setScene(scene){
+    state.currentScene = scene.id;
+    el.eventText.textContent = `${scene.title}\n${scene.text}`;
+    el.sceneTitle.textContent = scene.title;
+    el.choices.innerHTML = "";
+
+    const choices = scene.choices || [];
+    choices.forEach((choice, idx) => {
+      const btn = document.createElement("button");
+      btn.className = "choiceBtn" + (idx === 0 ? " primary" : "");
+      btn.textContent = choice.label;
+      const can = typeof choice.requires === "function" ? !!choice.requires(state) : true;
+      btn.disabled = !can;
+      btn.addEventListener("click", () => {
+        if (btn.disabled) return;
+        const effectLine = formatEffectLine(choice.effects);
+        addHint(`选择：${choice.label}${effectLine}`);
+        const { chemistryDelta } = applyEffects(choice.effects);
+        if (chemistryDelta){
+          addEvt(`张力波动：${chemistryDelta > 0 ? "+" : ""}${chemistryDelta}`);
         }
-      }
+        if (choice.log){
+          addEvt(choice.log);
+        }
+        if (choice.after){
+          choice.after(state);
+        }
+        if (scene.type === "dailyEvent"){
+          state.dayEventDone = true;
+          state.flags.lastSeen[scene.id] = state.day;
+          state.recentDaily.push(scene.id);
+          if (state.recentDaily.length > 8) state.recentDaily = state.recentDaily.slice(-8);
+          enterScene("hub");
+          return;
+        }
+        const defaultNext = (scene.type === "dailyMain" || scene.type === "turbulence") ? "hub" : null;
+        const nextScene = choice.next || defaultNext;
+        if (nextScene){
+          enterScene(nextScene);
+        } else {
+          renderHUD();
+          saveState();
+        }
+      });
+      el.choices.appendChild(btn);
+    });
+    renderHUD();
+    saveState();
+  }
+
+  function enterScene(id){
+    const scene = sceneMap[id];
+    if (!scene) return;
+    setScene(scene);
+  }
+
+  function pickFromPool(pool, recentKey){
+    const recent = state[recentKey] || [];
+    const candidates = pool.filter((scene) => {
+      if (typeof scene.requires === "function" && !scene.requires(state)) return false;
+      const lastSeen = state.flags.lastSeen[scene.id];
+      if (lastSeen && (state.day - lastSeen) < 7) return false;
+      if (recent.includes(scene.id)) return false;
+      return true;
+    });
+    const list = candidates.length ? candidates : pool;
+    const chosen = list[Math.floor(Math.random() * list.length)];
+    state.flags.lastSeen[chosen.id] = state.day;
+    state[recentKey] = [...recent, chosen.id].slice(-6);
+    return chosen;
+  }
+
+  function pickDailyEvent(){
+    const candidates = dailyEvents.filter((scene) => {
+      if (typeof scene.requires === "function" && !scene.requires(state)) return false;
+      const lastSeen = state.flags.lastSeen[scene.id];
+      if (lastSeen && (state.day - lastSeen) < 7) return false;
+      if (state.recentDaily.includes(scene.id)) return false;
+      return true;
+    });
+    const list = candidates.length ? candidates : dailyEvents;
+    const chosen = list[Math.floor(Math.random() * list.length)];
+    return chosen;
+  }
+
+  function triggerDailyEvent(){
+    const eventScene = pickDailyEvent();
+    addEvt(`每日随机事件：${eventScene.title}`);
+    setScene(eventScene);
+  }
+
+  function startDayFlow(){
+    if (!state.dayEventDone){
+      triggerDailyEvent();
+    } else {
+      enterScene("hub");
+    }
+  }
+
+  function endDay(){
+    const summary = generateDaySummary();
+    state.daySummary = summary;
+    addSys(`第 ${state.day} 天结束：${summary}`);
+    state.day += 1;
+    state.dayEventDone = false;
+    state.stamina = clamp(state.stamina + 3, 0, 100);
+    state.daySeed = `${state.day}-${Math.random().toString(16).slice(2, 6)}`;
+    enterScene("dayStart");
+  }
+
+  function generateDaySummary(){
+    if (state.chemistry >= 20 && state.trust >= 20) return "你们的默契越来越像一种默认的站队。";
+    if (state.chemistry >= 20) return "暧昧的火花被你小心地揣在口袋里。";
+    if (state.trust >= 20) return "你们的合作逐渐稳定，像无声的靠近。";
+    if (state.stamina <= 3) return "你把疲惫放在门口，先睡一觉再说。";
+    return "日常起伏不大，但你记得他的眼神。";
+  }
+
+  const dailyEvents = [
+    {
+      id: "ev_light_01",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "值班室的风扇",
+      text: "值班室的风扇转得慢，你和沈砚一人一边试着调角度。",
+      choices: [
+        { label: "让他调，你去拿冰水", effects: { trust: 1, chemistry: 1, items: { tea: 1 } }, log: "你把冰水塞到他手里，他笑了一下。" },
+        { label: "你靠近观察角度", effects: { stamina: -1, chemistry: 2 }, log: "你肩膀几乎碰到他，他故意不退。" }
+      ]
     },
     {
-      label: "先忙正事",
-      result: "你把注意力收回到手头的工作上，但那句话还是在你心里留了点热。",
-      apply: function(s){
-        s.comfort = clamp01(((s.comfort!=null)?s.comfort:50) + 0);
-      }
+      id: "ev_light_02",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "走廊擦肩",
+      text: "走廊太窄，你和他几乎同时转弯。",
+      choices: [
+        { label: "故意不让路", effects: { chemistry: 2 }, log: "你们停在同一条线，谁都没先退。" },
+        { label: "轻声说抱歉", effects: { trust: 1, chemistry: 1 }, log: "他看了你一秒，抬手替你挡住人流。" }
+      ]
+    },
+    {
+      id: "ev_light_03",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "食堂的汤",
+      text: "食堂只剩一份热汤，他把碗推到你面前。",
+      choices: [
+        { label: "接过，跟他说谢谢", effects: { trust: 2, chemistry: 1 }, log: "他嘴角动了动，说不客气。" },
+        { label: "坚持平分", effects: { chemistry: 2 }, log: "你们拿着同一把勺子，谁都没先放。" }
+      ]
+    },
+    {
+      id: "ev_light_04",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "训练房的绑带",
+      text: "你系绑带时有点松，他伸手帮你拉紧。",
+      choices: [
+        { label: "说他手太重", effects: { chemistry: 1, trust: 1 }, log: "他挑眉，说你也没躲。" },
+        { label: "不动，让他系好", effects: { chemistry: 2, stamina: 1 }, log: "他靠得很近，但动作很稳。" }
+      ]
+    },
+    {
+      id: "ev_light_05",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "装备间的钥匙",
+      text: "装备间钥匙卡住了，他从你背后伸手。",
+      choices: [
+        { label: "稳住他的手", effects: { chemistry: 2 }, log: "你掌心碰到他的手背。" },
+        { label: "笑他太急", effects: { chemistry: 1, trust: 1 }, log: "他低声笑了一下。" }
+      ]
+    },
+    {
+      id: "ev_light_06",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "医务室的药味",
+      text: "医务室里药味重，你们靠在门口透气。",
+      choices: [
+        { label: "问他要不要出去走走", effects: { trust: 1, chemistry: 1 }, log: "他点头，说跟你。" },
+        { label: "调侃他怕苦", effects: { chemistry: 2 }, log: "他靠近，回你一句：谁说我怕。" }
+      ]
+    },
+    {
+      id: "ev_light_07",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "屋顶的风",
+      text: "屋顶风大，他把外套搭在你肩上。",
+      choices: [
+        { label: "抬头看他", effects: { chemistry: 2 }, log: "他收回视线的速度比风还快。" },
+        { label: "把外套递回去", effects: { trust: 2, chemistry: 1 }, log: "他没接，只说先穿着。" }
+      ]
+    },
+    {
+      id: "ev_light_08",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "雨天门口",
+      text: "雨声淹没了脚步声，你们一起站在门口。",
+      choices: [
+        { label: "共用一把伞", effects: { chemistry: 2, stamina: 1 }, log: "伞沿压得很低，你们靠得更近。" },
+        { label: "把伞塞给他", effects: { trust: 1, chemistry: 1 }, log: "他没推回去，只说晚点还你。" }
+      ]
+    },
+    {
+      id: "ev_light_09",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "深夜泡茶",
+      text: "夜里你泡了茶，他路过时停了一下。",
+      choices: [
+        { label: "请他喝一口", effects: { chemistry: 1, trust: 1, items: { tea: -1 } }, log: "他接过杯子，说味道刚好。" },
+        { label: "装作没注意", effects: { trust: 1 }, log: "他还是轻声说了句晚安。" }
+      ]
+    },
+    {
+      id: "ev_light_10",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "走廊灯泡",
+      text: "走廊灯泡坏了，他让你把手电靠近。",
+      choices: [
+        { label: "把光照向他的脸", effects: { chemistry: 1 }, log: "他眯了眯眼，仍然没退。" },
+        { label: "让他踩凳子", effects: { trust: 1, stamina: -1 }, log: "他站稳后提醒你别抖。" }
+      ]
+    },
+    {
+      id: "ev_light_11",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "食堂队伍",
+      text: "排队时他站在你身后，轻声问你要不要换位。",
+      choices: [
+        { label: "靠后，让他挡人", effects: { chemistry: 2 }, log: "你贴近他的背影，他没说话。" },
+        { label: "拒绝他好意", effects: { trust: 1, chemistry: -1 }, log: "他也没勉强，只是点点头。" }
+      ]
+    },
+    {
+      id: "ev_light_12",
+      type: "dailyEvent",
+      category: "轻松日常",
+      title: "训练房的水壶",
+      text: "水壶没盖好，他拧紧后递给你。",
+      choices: [
+        { label: "道谢并递回一半", effects: { trust: 1, chemistry: 1 }, log: "你们各喝一口。" },
+        { label: "调侃他管太多", effects: { chemistry: 2 }, log: "他笑着说：那你别让我管。" }
+      ]
+    },
+    {
+      id: "ev_tension_01",
+      type: "dailyEvent",
+      category: "高张力互动",
+      title: "值班表对峙",
+      text: "值班表被改动，他站在你面前问是谁动的。",
+      choices: [
+        { label: "顶回去：你也没问我", effects: { chemistry: 2, trust: -1 }, log: "他挑眉，嘴角却松了。" },
+        { label: "低声解释原因", effects: { trust: 2, chemistry: 1 }, log: "他看了你一会儿，说下次告诉他。" }
+      ]
+    },
+    {
+      id: "ev_tension_02",
+      type: "dailyEvent",
+      category: "高张力互动",
+      title: "走廊壁咚",
+      text: "你转身时差点撞上他，他抬手撑在你身侧。",
+      choices: [
+        { label: "不退，盯回去", effects: { chemistry: 3 }, log: "他低声笑，说你胆子不小。" },
+        { label: "轻推他一下", effects: { chemistry: 1, trust: 1 }, log: "他顺势退开，但视线没走。" }
+      ]
+    },
+    {
+      id: "ev_tension_03",
+      type: "dailyEvent",
+      category: "高张力互动",
+      title: "训练房的对练",
+      text: "对练时他突然压近，你们的距离只剩半步。",
+      choices: [
+        { label: "反手扣住", effects: { chemistry: 2, stamina: -1 }, log: "他低声说：有点意思。" },
+        { label: "示意暂停", effects: { trust: 1, chemistry: 1 }, log: "他收手，但眼神还没散。" }
+      ]
+    },
+    {
+      id: "ev_tension_04",
+      type: "dailyEvent",
+      category: "高张力互动",
+      title: "装备间的护短",
+      text: "有人在装备间质疑你，他当场挡在你面前。",
+      choices: [
+        { label: "站到他身侧", effects: { trust: 2, chemistry: 1 }, log: "他说话不重，却很护你。" },
+        { label: "自己回应对方", effects: { chemistry: 2, trust: 1 }, log: "他看你的眼神像是在夸。" }
+      ]
+    },
+    {
+      id: "ev_tension_05",
+      type: "dailyEvent",
+      category: "高张力互动",
+      title: "雨夜门口",
+      text: "雨夜门口风大，他伸手拉住你的手腕。",
+      choices: [
+        { label: "没挣开", effects: { chemistry: 3 }, log: "他把你带回屋檐里。" },
+        { label: "故意问他在担心什么", effects: { chemistry: 2, trust: 1 }, log: "他只说：你知道。" }
+      ]
+    },
+    {
+      id: "ev_tension_06",
+      type: "dailyEvent",
+      category: "高张力互动",
+      title: "食堂座位",
+      text: "你刚坐下，他把餐盘放到你对面。",
+      choices: [
+        { label: "抬眼说：你终于肯坐", effects: { chemistry: 2, trust: 1 }, log: "他笑，说别得寸进尺。" },
+        { label: "安静吃饭", effects: { trust: 1, chemistry: -1 }, log: "他仍旧没走。" }
+      ]
+    },
+    {
+      id: "ev_tension_07",
+      type: "dailyEvent",
+      category: "高张力互动",
+      title: "值班室换班",
+      text: "你发现他的班被调走，他只说晚点解释。",
+      choices: [
+        { label: "追问他", effects: { chemistry: 2, trust: 1 }, log: "他靠近说：别担心我。" },
+        { label: "点头放他走", effects: { trust: 2, chemistry: -1 }, log: "他走到门口又回头。" }
+      ]
+    },
+    {
+      id: "ev_tension_08",
+      type: "dailyEvent",
+      category: "高张力互动",
+      title: "屋顶对峙",
+      text: "屋顶只有你们两人，他问你为什么最近避开他。",
+      choices: [
+        { label: "说你只是累了", effects: { trust: 1, chemistry: 1 }, log: "他点头，但没退开。" },
+        { label: "反问他是不是怕了", effects: { chemistry: 3 }, log: "他笑了声，说试试看。" }
+      ]
+    },
+    {
+      id: "ev_tension_09",
+      type: "dailyEvent",
+      category: "高张力互动",
+      title: "医务室的眼神",
+      text: "你替人换药时，他站在门口盯着你。",
+      choices: [
+        { label: "用眼神示意他进来", effects: { chemistry: 2, trust: 1 }, log: "他靠近，声音压得很低。" },
+        { label: "把他赶出去", effects: { trust: 1, chemistry: -1 }, log: "他扬眉：你确定？" }
+      ]
+    },
+    {
+      id: "ev_tension_10",
+      type: "dailyEvent",
+      category: "高张力互动",
+      title: "走廊护短",
+      text: "有人说你太拼，他当场把话题带走。",
+      choices: [
+        { label: "朝他点头", effects: { trust: 2, chemistry: 1 }, log: "他没看别人，只看你。" },
+        { label: "开玩笑拆他的台", effects: { chemistry: 2 }, log: "他靠近低声：回去再算。" }
+      ]
+    },
+    {
+      id: "ev_awkward_01",
+      type: "dailyEvent",
+      category: "小尴尬",
+      title: "错拿的围巾",
+      text: "你把他的围巾拿走，他发现后站在门口盯你。",
+      choices: [
+        { label: "直接还回去", effects: { trust: 1, chemistry: 1 }, log: "他接过时指尖擦到你。" },
+        { label: "问他要不要换一条", effects: { chemistry: 2, items: { blanket: -1 } }, log: "他挑眉：你舍得？" }
+      ]
+    },
+    {
+      id: "ev_awkward_02",
+      type: "dailyEvent",
+      category: "小尴尬",
+      title: "误会的零食",
+      text: "你把零食放桌上，他以为是给他。",
+      choices: [
+        { label: "顺势递过去", effects: { trust: 1, chemistry: 1, items: { snack: -1 } }, log: "他接过，说记下了。" },
+        { label: "说是你的储备", effects: { chemistry: -1, trust: 1 }, log: "他没走，但笑意淡了。" }
+      ]
+    },
+    {
+      id: "ev_awkward_03",
+      type: "dailyEvent",
+      category: "小尴尬",
+      title: "对讲机串频",
+      text: "对讲机里传来他喊你的小名，你们同时停顿。",
+      choices: [
+        { label: "反问他为什么这样叫", effects: { chemistry: 2 }, log: "他沉默半秒，说你不讨厌。" },
+        { label: "假装没听见", effects: { trust: 1 }, log: "他随后补一句：没事。" }
+      ]
+    },
+    {
+      id: "ev_awkward_04",
+      type: "dailyEvent",
+      category: "小尴尬",
+      title: "医务室的误会",
+      text: "你给别人包扎，他误以为你受伤。",
+      choices: [
+        { label: "拉住他解释", effects: { trust: 2, chemistry: 1 }, log: "他松了一口气。" },
+        { label: "让他自己看清", effects: { chemistry: 2 }, log: "他靠近看清后低声说：别吓我。" }
+      ]
+    },
+    {
+      id: "ev_awkward_05",
+      type: "dailyEvent",
+      category: "小尴尬",
+      title: "训练房的贴纸",
+      text: "你背后贴了训练房的贴纸，他盯了一会儿。",
+      choices: [
+        { label: "让他帮你撕", effects: { chemistry: 2 }, log: "他指尖擦过你后背。" },
+        { label: "自己撕掉", effects: { trust: 1, chemistry: -1 }, log: "他收回手。" }
+      ]
+    },
+    {
+      id: "ev_awkward_06",
+      type: "dailyEvent",
+      category: "小尴尬",
+      title: "值班室的靠枕",
+      text: "你把靠枕推到他那边，他以为你让他坐近点。",
+      choices: [
+        { label: "解释说只是给他靠", effects: { trust: 1, chemistry: 1 }, log: "他点头，却没换位置。" },
+        { label: "干脆不解释", effects: { chemistry: 2 }, log: "他靠过来，问你紧张什么。" }
+      ]
     }
   ];
 
-  return ev;
-}
-
-function loadUserEvents(){
-  try{
-    var raw = __safeStorage.getItem(USER_EVENTS_KEY);
-    if (!raw) return [];
-    var arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr.map(normalizeUserEvent);
-  }catch(e){
-    if (window.__WZ_DEBUG) window.__WZ_DEBUG("用户剧情解析失败：" + e);
-    return [];
-  }
-}
-
-
-
-
-let state = loadState() || defaultState();
-let pendingEvent = null;
-
-boot();
-
-function boot(){
-  // 初始日志
-  if (state.log.length === 0){
-    addSys("系统自检完成。");
-    addSys("战区网络已连接。");
-    addSys("正在等待指令…");
-    addEvt(`系统初始化完成。欢迎回到中立区，${state.player}。`);
-    saveState();
-  } else {
-    // 把存档日志渲染出来
-    renderLog();
-  }
-
-  wire();
-  renderAll();
-  setEvent(null);
-
-  // 若刚好有“埋下后续”的 flag，给一点提示
-  if (state.flags.pending_wound && !state.flags.pending_wound_hint){
-    state.flags.pending_wound_hint = true;
-    addHint("你记得还有一名伤员需要后续观察，可能在接下来几次行动里出现结果。");
-    saveState();
-    renderAll();
-  }
-}
-
-function wire(){
-  el.btnSave.addEventListener("click", () => {
-    saveState(true);
-    addSys("存档已写入本地。");
-    renderAll();
-  });
-
-  el.btnNew.addEventListener("click", () => {
-    state = defaultState();
-    saveState(true);
-    el.log.innerHTML = "";
-    boot();
-  });
-
-  el.btnResetBest.addEventListener("click", () => {
-    __safeStorage.removeItem(SAVE_KEY);
-    state = defaultState();
-    el.log.innerHTML = "";
-    boot();
-  });
-
-  el.actShop.addEventListener("click", () => doAction("shop", "你选择：开门营业（-1 AP）", 1));
-  el.actPurchase.addEventListener("click", () => doAction("purchase", "你选择：采购物资（不消耗 AP）", 0));
-  el.actExplore.addEventListener("click", () => doAction("explore", "你选择：主动探索（-1 AP）", 1));
-  el.actSearch.addEventListener("click", () => doSearch());
-  el.actTreat.addEventListener("click", () => doAction("treat", "你选择：治疗伤员（-1 AP）", 1));
-  el.actRest.addEventListener("click", () => restDay());
-}
-
-
-function doSearch(){
-  if (pendingEvent){
-    addWarn("当前事件尚未做出选择。");
-    renderAll();
-    return;
-  }
-  if (state.ap <= 0){
-    addWarn("AP 不足。你需要休息结束当天。");
-    renderAll();
-    return;
-  }
-
-  // 消耗 AP
-  state.ap -= 1;
-
-  addHint("你选择：外出搜索（-1 AP）");
-
-  // 冷却推进
-  tickCooldowns();
-
-  // 先给“收获”，再触发事件（更像一次完整的外出）
-  const foodGain = 1 + Math.floor(Math.random() * 3);      // 1-3
-  const medGain  = (Math.random() < 0.45) ? 1 : 0;         // 45% +1
-  const ammoGain = (Math.random() < 0.30) ? 1 : 0;         // 30% +1
-
-  addInv("food", foodGain);
-  if (medGain) addInv("medkit", medGain);
-  if (ammoGain) addInv("ammo", ammoGain);
-
-  const lootLine = `你把背包塞得更满了：军粮 +${foodGain}` + (medGain ? ` / 医疗包 +${medGain}` : "") + (ammoGain ? ` / 弹药 +${ammoGain}` : "");
-  addSys(lootLine);
-
-  // 环境余温
-  ambientLine("search");
-
-  // 触发“搜索”上下文事件：可能遇到熟人 / 产生恋爱对话 / 触发路人小插曲
-  const ev = pickEvent("search");
-  if (!ev){
-    addSys("这一圈很安静，你平安回到站点。");
-  } else {
-    setEvent(ev);
-  }
-
-  saveState();
-  renderAll();
-}
-
-function doAction(context, logLine, cost = 1){
-  if (pendingEvent){
-    addWarn("当前事件尚未做出选择。");
-    renderAll();
-    return;
-  }
-  if (cost > 0 && state.ap <= 0){
-    addWarn("AP 不足。你需要休息结束当天。");
-    renderAll();
-    return;
-  }
-
-  state.ap -= cost;
-  addHint(logLine);
-
-  // 每消耗 1 AP 必触发 1 次事件（上下文）
-  tickCooldowns();
-  const ev = pickEvent(context);
-  if (!ev){
-    addSys("本次没有可用事件（条件不满足）。");
-    saveState();
-    renderAll();
-    return;
-  }
-  setEvent(ev);
-  saveState();
-  renderAll();
-}
-
-function restDay(){
-  if (pendingEvent){
-    addWarn("当前事件尚未做出选择。");
-    renderAll();
-    return;
-  }
-
-  // 日结：轻微温度衰减（但不会很残酷）
-  state.day += 1;
-  state.ap = state.apMax;
-
-  // 温度自然回落一点，但如果你有老收音机等物件，可以缓冲
-  const decay = state.flags.old_radio ? 1 : 2;
-  state.comfort = clamp01((((state.comfort)!=null ? (state.comfort) : (50))) - decay);
-
-  addHint("你选择：休息 / 结束当天（DAY +1，AP 充满）");
-
-  // 夜间结算也触发一次事件（不消耗 AP），更日常、更甜
-  tickCooldowns();
-  const ev = pickEvent("night", { night: true });
-  if (ev) setEvent(ev);
-
-  saveState();
-  renderAll();
-}
-
-function tickCooldowns(){
-  for (const [id, n] of Object.entries(state.cooldowns || {})){
-    if (n <= 1) delete state.cooldowns[id];
-    else state.cooldowns[id] = n - 1;
-  }
-}
-
-function pickEvent(context, opts = {}){
-  const pool = EVENT_POOLS[context] || [];
-  const candidates = [];
-
-  // 基础类别权重：恋爱更密，但经营仍是主线
-  let typeW = {
-    romance: 0.50,
-    business: 0.35,
-    faction: 0.10,
-    stranger: 0.05,
-  };
-
-  // 甜度保底：连续 3 次没抽到恋爱，下次提高恋爱权重
-  if ((((state.noRomanceStreak)!=null ? (state.noRomanceStreak) : (0))) >= 3){
-    typeW.romance += 0.20;
-    typeW.business -= 0.10;
-    typeW.stranger -= 0.05;
-    typeW.faction -= 0.05;
-  }
-
-  // 夜间更偏甜/日常
-  if (opts.night){
-    typeW.romance += 0.10;
-    typeW.faction = Math.max(0.02, typeW.faction - 0.05);
-    typeW.stranger += 0.02;
-    typeW.business = Math.max(0.20, typeW.business - 0.07);
-  }
-
-  // 处理极端情况
-  for (const k of Object.keys(typeW)){
-    if (typeW[k] < 0) typeW[k] = 0;
-  }
-
-  for (const ev of pool){
-    // 冷却
-    if ((state.cooldowns && state.cooldowns[ev.id])) continue;
-
-    // 条件
-    if (typeof ev.when === "function" && !ev.when(state)) continue;
-
-    // 类型权重
-    const tw = typeW[ev.type] || 0.10;
-    if (tw <= 0) continue;
-
-    // 角色去重：最近两次出现过的 actor，权重降低
-    let actorPenalty = 1.0;
-    if (ev.type === "romance" && ev.actor){
-      const recent = state.recentActors.slice(-2);
-      if (recent.includes(ev.actor)) actorPenalty = 0.40;
+  const dailyMainScenes = [
+    {
+      id: "daily_01",
+      type: "dailyMain",
+      title: "值班室交接",
+      text: "你核对值班记录，沈砚站在身后轻声问：今天顺吗？",
+      choices: [
+        { label: "说还行，顺便递给他清单", effects: { trust: 2 }, log: "他收下清单，说晚上补给。" },
+        { label: "调侃他问得像查岗", effects: { chemistry: 2 }, log: "他压低声说：你敢躲我？" }
+      ]
+    },
+    {
+      id: "daily_02",
+      type: "dailyMain",
+      title: "走廊补货",
+      text: "你抱着箱子走在走廊，箱子有点重。",
+      choices: [
+        { label: "示意他帮你拿", effects: { trust: 1, chemistry: 1, stamina: 1 }, log: "他接过箱子，说下次别逞强。" },
+        { label: "自己扛着走", effects: { stamina: -1, chemistry: -1 }, log: "他皱眉，但没拦你。" }
+      ]
+    },
+    {
+      id: "daily_03",
+      type: "dailyMain",
+      title: "食堂排班",
+      text: "你们一起看排班表，今天他本该去巡检。",
+      choices: [
+        { label: "问他要不要换班", effects: { trust: 2 }, log: "他看你一眼，说只有你能安排我。" },
+        { label: "让他按表走", effects: { trust: 1, chemistry: -1 }, log: "他点头，但目光没离开你。" }
+      ]
+    },
+    {
+      id: "daily_04",
+      type: "dailyMain",
+      title: "训练房收拾",
+      text: "训练房收拾得乱，你俩一起捡垫子。",
+      choices: [
+        { label: "开玩笑让他请喝水", effects: { chemistry: 2, items: { tea: 1 } }, log: "他真的去倒水。" },
+        { label: "默契地配合", effects: { trust: 2 }, log: "你们像排练过一样。" }
+      ]
+    },
+    {
+      id: "daily_05",
+      type: "dailyMain",
+      title: "装备清点",
+      text: "你对着清单找工具盒，他站在柜门边。",
+      choices: [
+        { label: "让他帮你找", effects: { trust: 1, chemistry: 1, items: { toolkit: 1 } }, log: "他从最上层拿下来，递给你。" },
+        { label: "自己踮脚去够", effects: { stamina: -1, chemistry: 1 }, log: "他伸手托了你一下。" }
+      ]
+    },
+    {
+      id: "daily_06",
+      type: "dailyMain",
+      title: "医务室回访",
+      text: "你们一起回访值班室的轻伤员。",
+      choices: [
+        { label: "让他记录", effects: { trust: 1 }, log: "他记得很认真。" },
+        { label: "让他帮你拿药", effects: { chemistry: 1, trust: 1 }, log: "他低声说你别走太远。" }
+      ]
+    },
+    {
+      id: "daily_07",
+      type: "dailyMain",
+      title: "屋顶透气",
+      text: "你们站在屋顶透气，他先开口说：别总憋着。",
+      choices: [
+        { label: "承认最近有点累", effects: { trust: 2, stamina: 1 }, log: "他沉默一下，说今晚早点睡。" },
+        { label: "说你挺习惯", effects: { chemistry: 2 }, log: "他盯你一会儿，说你太倔。" }
+      ]
+    },
+    {
+      id: "daily_08",
+      type: "dailyMain",
+      title: "雨天巡门",
+      text: "雨天门口积水，他站在你身侧盯着外面。",
+      choices: [
+        { label: "与他站同一侧", effects: { chemistry: 2, trust: 1 }, log: "他侧过身，替你挡风。" },
+        { label: "让他回去休息", effects: { trust: 2, chemistry: -1 }, log: "他没动，只说再等一会儿。" }
+      ]
+    },
+    {
+      id: "daily_09",
+      type: "dailyMain",
+      title: "值班室夜聊",
+      text: "夜里你们一起整理记录，他忽然问你想不想换个岗位。",
+      choices: [
+        { label: "说现在挺好", effects: { trust: 2 }, log: "他说：那我就放心。" },
+        { label: "问他会不会跟着换", effects: { chemistry: 2, trust: 1 }, log: "他轻笑，说你想得美。" }
+      ],
+      requires: (s) => s.day >= 2
+    },
+    {
+      id: "daily_10",
+      type: "dailyMain",
+      title: "走廊拐角",
+      text: "你刚转弯，他停在角落等你。",
+      choices: [
+        { label: "问他是不是在等你", effects: { chemistry: 2 }, log: "他不否认。" },
+        { label: "绕过他继续走", effects: { chemistry: -1, trust: 1 }, log: "他跟在你后面。" }
+      ]
+    },
+    {
+      id: "daily_11",
+      type: "dailyMain",
+      title: "食堂打包",
+      text: "食堂临时打包，他帮你拿了双份。",
+      choices: [
+        { label: "分他一份", effects: { trust: 1, chemistry: 1 }, log: "他接得很快。" },
+        { label: "说你会饿", effects: { chemistry: 1 }, log: "他挑眉：你不怕我记账？" }
+      ]
+    },
+    {
+      id: "daily_12",
+      type: "dailyMain",
+      title: "训练房的默契",
+      text: "你们一起把器械收起，他忽然把重的部分递给你。",
+      choices: [
+        { label: "接过并说没关系", effects: { trust: 2, stamina: -1 }, log: "他盯着你手臂说别硬撑。" },
+        { label: "推回去让他拿", effects: { chemistry: 2 }, log: "他笑着接过，说你真会使唤人。" }
+      ]
+    },
+    {
+      id: "daily_13",
+      type: "dailyMain",
+      title: "装备间的贴纸",
+      text: "你把注意事项贴在柜门，他站在旁边看。",
+      choices: [
+        { label: "让他写下一条提醒", effects: { trust: 2 }, log: "他的字很稳。" },
+        { label: "问他要不要署名", effects: { chemistry: 2 }, log: "他说：只给你看。" }
+      ]
+    },
+    {
+      id: "daily_14",
+      type: "dailyMain",
+      title: "医务室门口",
+      text: "他在医务室门口等你出来。",
+      choices: [
+        { label: "说你没事", effects: { trust: 1 }, log: "他点头，但没移开视线。" },
+        { label: "反问他是不是担心", effects: { chemistry: 2 }, log: "他答得很轻：嗯。" }
+      ]
+    },
+    {
+      id: "daily_15",
+      type: "dailyMain",
+      title: "屋顶的风声",
+      text: "屋顶风声太大，你们靠得更近说话。",
+      choices: [
+        { label: "说你听不清", effects: { chemistry: 2 }, log: "他靠近再说一遍。" },
+        { label: "示意他别太靠", effects: { chemistry: -1, trust: 1 }, log: "他抬手挡住你的耳朵。" }
+      ],
+      requires: (s) => s.day >= 3
+    },
+    {
+      id: "daily_16",
+      type: "dailyMain",
+      title: "值班室点名",
+      text: "他点名你替他跑一趟，你挑眉看他。",
+      choices: [
+        { label: "答应但要交换条件", effects: { chemistry: 2, trust: 1 }, log: "他笑说你会谈判。" },
+        { label: "直接拒绝", effects: { trust: -1, chemistry: 1 }, log: "他耸肩，说那就算了。" }
+      ],
+      requires: (s) => s.trust >= 6
+    },
+    {
+      id: "daily_17",
+      type: "dailyMain",
+      title: "训练房的手套",
+      text: "你手套被他拿走，他晃了晃让你来拿。",
+      choices: [
+        { label: "伸手抢回来", effects: { chemistry: 2, stamina: -1 }, log: "他抓住你的手腕。" },
+        { label: "等他自己递还", effects: { trust: 1, chemistry: 1 }, log: "他笑着递给你。" }
+      ]
+    },
+    {
+      id: "daily_18",
+      type: "dailyMain",
+      title: "食堂夜点",
+      text: "食堂夜点只剩一份，他问你要不要吃。",
+      choices: [
+        { label: "分他一半", effects: { trust: 1, chemistry: 1, items: { snack: -1 } }, log: "你们一起坐在角落。" },
+        { label: "让他吃完", effects: { trust: 2, chemistry: -1 }, log: "他说你太客气。" }
+      ],
+      requires: (s) => s.items.snack > 0
     }
+  ];
 
-    // 安全灯光：降低坏事件概率（这里用在 faction/business 的部分事件上）
-    let comfortBonus = 1.0;
-    if (state.flags.safety_lighting && (ev.type === "faction")){
-      comfortBonus = 0.85;
+  const turbulenceScenes = [
+    {
+      id: "turb_01",
+      type: "turbulence",
+      title: "走廊停电",
+      text: "走廊突然停电，你们只能靠手电前进。",
+      choices: [
+        { label: "牵住他的袖子", effects: { chemistry: 2, trust: 1 }, log: "他没说话，却放慢脚步。" },
+        { label: "让他走前面", effects: { trust: 1 }, log: "他回头提醒你别掉队。" }
+      ]
+    },
+    {
+      id: "turb_02",
+      type: "turbulence",
+      title: "临时换班",
+      text: "临时换班打乱计划，他把名单递给你。",
+      choices: [
+        { label: "帮他分担", effects: { trust: 2, stamina: -1 }, log: "他低声说欠你一次。" },
+        { label: "让他自己处理", effects: { trust: -1, chemistry: 1 }, log: "他看你一眼，什么也没说。" }
+      ]
+    },
+    {
+      id: "turb_03",
+      type: "turbulence",
+      title: "装备失灵",
+      text: "对讲机突然失灵，你们一起排查线路。",
+      choices: [
+        { label: "让他动手，你做记录", effects: { trust: 1, chemistry: 1, items: { toolkit: -1 } }, requires: (s) => s.items.toolkit > 0, log: "他一边修一边叮嘱你。" },
+        { label: "两人一起钻进桌底", effects: { chemistry: 2, stamina: -1 }, log: "你们头碰头，谁也不先退。" }
+      ]
+    },
+    {
+      id: "turb_04",
+      type: "turbulence",
+      title: "雨夜门口",
+      text: "雨夜门口多了陌生人，你们对视一眼。",
+      choices: [
+        { label: "让他出面", effects: { trust: 1, chemistry: 1 }, log: "他挡在你前面。" },
+        { label: "你先开口", effects: { chemistry: 2, trust: 1 }, log: "他在你身后补一句。" }
+      ]
+    },
+    {
+      id: "turb_05",
+      type: "turbulence",
+      title: "医务室临诊",
+      text: "医务室突然忙起来，他站在门口等指示。",
+      choices: [
+        { label: "让他递工具", effects: { trust: 2 }, log: "他动作稳得像熟手。" },
+        { label: "让他出去安抚外面", effects: { trust: 1, chemistry: 1 }, log: "他临走前看了你一眼。" }
+      ]
+    },
+    {
+      id: "turb_06",
+      type: "turbulence",
+      title: "走廊堵塞",
+      text: "走廊被箱子堵住，你们一起搬开。",
+      choices: [
+        { label: "让他先过", effects: { trust: 1, chemistry: 1 }, log: "他回身拉你一下。" },
+        { label: "顶着箱子前进", effects: { stamina: -1, chemistry: 2 }, log: "他笑着说你真拼。" }
+      ]
+    },
+    {
+      id: "turb_07",
+      type: "turbulence",
+      title: "走廊误报",
+      text: "警报误报响起，他第一时间找你。",
+      choices: [
+        { label: "让他放心", effects: { trust: 2, chemistry: 1 }, log: "他松了口气。" },
+        { label: "问他是不是担心你", effects: { chemistry: 2 }, log: "他停顿，说是。" }
+      ],
+      requires: (s) => s.trust >= 5
+    },
+    {
+      id: "turb_08",
+      type: "turbulence",
+      title: "屋顶冷风",
+      text: "屋顶突然降温，他把外套扔给你。",
+      choices: [
+        { label: "穿上再还", effects: { chemistry: 2, trust: 1 }, log: "他看你扣好扣子。" },
+        { label: "推回去", effects: { chemistry: -1, trust: 1 }, log: "他皱眉：别逞强。" }
+      ]
+    },
+    {
+      id: "turb_09",
+      type: "turbulence",
+      title: "设备故障",
+      text: "设备故障需要门卡进入，他看着你。",
+      choices: [
+        { label: "拿出门卡", effects: { trust: 1, chemistry: 1, items: { keycard: -1 } }, requires: (s) => s.items.keycard > 0, log: "他低声说谢谢。" },
+        { label: "让他去找人", effects: { trust: -1, chemistry: 1 }, log: "他点头，但明显不爽。" }
+      ]
+    },
+    {
+      id: "turb_10",
+      type: "turbulence",
+      title: "训练房突发",
+      text: "训练房有人争执，他站在你前面压住场面。",
+      choices: [
+        { label: "在他身侧补一句", effects: { trust: 1, chemistry: 1 }, log: "场面很快平下来。" },
+        { label: "示意他别太凶", effects: { chemistry: 2 }, log: "他靠近低声说：只对他们凶。" }
+      ]
+    },
+    {
+      id: "turb_11",
+      type: "turbulence",
+      title: "食堂临时断供",
+      text: "食堂断供，你翻到一包零食。",
+      choices: [
+        { label: "分给他", effects: { trust: 1, chemistry: 1, items: { snack: -1 } }, requires: (s) => s.items.snack > 0, log: "他接过时说记你人情。" },
+        { label: "说你也饿", effects: { chemistry: 1, trust: 1 }, log: "他笑：我知道。" }
+      ]
+    },
+    {
+      id: "turb_12",
+      type: "turbulence",
+      title: "门口检查",
+      text: "门口临检，你们要对口供。",
+      choices: [
+        { label: "让他先说", effects: { trust: 1 }, log: "他很快把话接住。" },
+        { label: "你先说，他补一句", effects: { chemistry: 2 }, log: "他的声音贴在你耳侧。" }
+      ],
+      requires: (s) => s.day >= 3
     }
+  ];
 
-    const w = (((ev.weight)!=null ? (ev.weight) : (10))) * tw * actorPenalty * comfortBonus;
-    if (w <= 0) continue;
+  const endings = [
+    {
+      id: "end_bonded",
+      type: "ending",
+      title: "默契绑定",
+      text: "你们不再多说什么，但每次对视都像确认过。",
+      choices: [
+        { label: "回到日常", next: "dayStart" }
+      ],
+      requires: (s) => s.trust >= 25 && s.chemistry >= 25
+    },
+    {
+      id: "end_stable",
+      type: "ending",
+      title: "稳定陪伴",
+      text: "你们保持距离却很稳定，他总能在你需要时出现。",
+      choices: [
+        { label: "回到日常", next: "dayStart" }
+      ],
+      requires: (s) => s.trust >= 25 && s.chemistry < 15
+    },
+    {
+      id: "end_tension",
+      type: "ending",
+      title: "暧昧拉扯",
+      text: "你们之间总有一句没说完的话，像风停在门口。",
+      choices: [
+        { label: "回到日常", next: "dayStart" }
+      ],
+      requires: (s) => s.trust < 18 && s.chemistry >= 25
+    },
+    {
+      id: "end_companion",
+      type: "ending",
+      title: "并肩搭档",
+      text: "你们的合作更像默契队友，话不多但很稳。",
+      choices: [
+        { label: "回到日常", next: "dayStart" }
+      ],
+      requires: (s) => s.trust >= 18 && s.chemistry >= 12
+    },
+    {
+      id: "end_quiet",
+      type: "ending",
+      title: "安静余温",
+      text: "你收起情绪，把日常过成缓慢的回音。",
+      choices: [
+        { label: "回到日常", next: "dayStart" }
+      ],
+      requires: (s) => s.trust < 18 && s.chemistry < 12
+    },
+    {
+      id: "end_independent",
+      type: "ending",
+      title: "独自选择",
+      text: "你把注意力放在自己身上，他没有打扰。",
+      choices: [
+        { label: "回到日常", next: "dayStart" }
+      ],
+      requires: (s) => s.stamina >= 20
+    }
+  ];
 
-    candidates.push({ ev, w });
-  }
+  const sceneMap = {};
 
-  if (candidates.length === 0) return null;
+  const baseScenes = [
+    {
+      id: "dayStart",
+      type: "system",
+      title: "日程开始",
+      text: "你翻开新的任务卡，今天仍然是日常与一点点张力。",
+      choices: [
+        { label: "开始当天", after: startDayFlow }
+      ]
+    },
+    {
+      id: "hub",
+      type: "hub",
+      title: "日常主线枢纽",
+      text: "你站在走廊交叉口，今天要做点什么？",
+      choices: [
+        { label: "进入日常主线", after: () => enterScene(pickFromPool(dailyMainScenes, "recentDailyMain").id) },
+        { label: "处理小波澜", after: () => enterScene(pickFromPool(turbulenceScenes, "recentTurbulence").id) },
+        { label: "进入下一天", after: endDay },
+        { label: "收束关系", next: "ending_gate", requires: (s) => s.day >= 4 }
+      ]
+    },
+    {
+      id: "ending_gate",
+      type: "system",
+      title: "收束选择",
+      text: "当你准备停下脚步，可以选择一种关系的落点。",
+      choices: endings.map((end) => ({
+        label: `查看结局：${end.title}`,
+        next: end.id,
+        requires: end.requires
+      })).concat([
+        { label: "还是再走几天", next: "hub" }
+      ])
+    }
+  ];
 
-  // 加权随机
-  const total = candidates.reduce((s, x) => s + x.w, 0);
-  let r = Math.random() * total;
-  for (const c of candidates){
-    r -= c.w;
-    if (r <= 0) return c.ev;
-  }
-  return candidates[candidates.length - 1].ev;
-}
+  const scenePools = [...dailyMainScenes, ...turbulenceScenes, ...dailyEvents, ...endings, ...baseScenes];
+  scenePools.forEach((scene) => {
+    sceneMap[scene.id] = scene;
+  });
 
-function setEvent(ev){
-  pendingEvent = ev;
-  if (!ev){
-    el.eventText.textContent = "";
-    el.choices.innerHTML = "";
-    return;
-  }
-
-  const actorLabel = (ev.actor ? `【${actorName(ev.actor)}】` : "【站点】");
-  const rawText = pickText(ev.text);
-  const text = fmt(rawText);
-
-  addEvt(`${actorLabel}
-${text}`);
-
-  el.eventText.textContent = text || "";
-  el.choices.innerHTML = "";
-
-  const choices = ev.choices || [];
-  choices.forEach((ch, idx) => {
-    const btn = document.createElement("button");
-    btn.className = "choiceBtn" + (idx === 0 ? " primary" : "");
-    btn.textContent = fmt(ch.label);
-
-    let ok = true;
-    if (typeof ch.can === "function") ok = !!ch.can(state);
-    btn.disabled = !ok;
-
-    btn.addEventListener("click", () => {
-      if (!pendingEvent) return;
-      const can = typeof ch.can === "function" ? !!ch.can(state) : true;
-      if (!can) return;
-
-      if (typeof ch.apply === "function") ch.apply(state);
-
-      if (ch.result){
-        const rt = fmt(pickText(ch.result));
-        addEvt(`${actorLabel}
-${rt}`);
-      }
-
-      state.cooldowns = state.cooldowns || {};
-      state.recentActors = Array.isArray(state.recentActors) ? state.recentActors : [];
-      state.noRomanceStreak = Number.isFinite(state.noRomanceStreak) ? state.noRomanceStreak : 0;
-
-      if (pendingEvent.type === "romance"){
-        state.noRomanceStreak = 0;
-        if (pendingEvent.actor){
-          state.recentActors.push(pendingEvent.actor);
-          if (state.recentActors.length > 6) state.recentActors = state.recentActors.slice(-6);
-        }
-      } else {
-        state.noRomanceStreak += 1;
-      }
-
-      if (pendingEvent.cooldown){
-        state.cooldowns[pendingEvent.id] = pendingEvent.cooldown;
-      }
-
-      pendingEvent = null;
-      el.eventText.textContent = "";
-      el.choices.innerHTML = "";
-
-      saveState();
-      renderAll();
+  function wire(){
+    el.btnNew.addEventListener("click", () => {
+      state = defaultState();
+      renderLog();
+      addSys("新档已创建。欢迎回来。");
+      enterScene("dayStart");
     });
 
-    el.choices.appendChild(btn);
-  });
-}
+    el.btnSave.addEventListener("click", () => {
+      saveState();
+      addSys("存档已保存到本地。");
+      renderHUD();
+    });
 
-function renderAll(){
-  el.day.textContent = String(state.day);
-  el.ap.textContent = String(state.ap);
-  el.apMax.textContent = String(state.apMax);
-  el.cash.textContent = String(state.cash);
-  el.comfort.textContent = String(((state.comfort)!=null ? (state.comfort) : (50)));
+    el.btnReset.addEventListener("click", () => {
+      window.localStorage.removeItem(SAVE_KEY);
+      state = defaultState();
+      renderLog();
+      addSys("存档已清空。");
+      enterScene("dayStart");
+    });
 
-  el.invMedkit.textContent = String(state.inv.medkit);
-  el.invFood.textContent = String(state.inv.food);
-  el.invAmmo.textContent = String(state.inv.ammo);
-  el.invCap.textContent = String(state.inv.cap);
-
-  el.relTF141.textContent = String(((state.relations.TF141)!=null ? (state.relations.TF141) : (0)));
-  el.relKorTac.textContent = String(((state.relations.KorTac)!=null ? (state.relations.KorTac) : (0)));
-  el.relGhosts.textContent = String(((state.relations.Ghosts)!=null ? (state.relations.Ghosts) : (0)));
-  el.relChimera.textContent = String(((state.relations.Chimera)!=null ? (state.relations.Chimera) : (0)));
-
-  renderAffection();
-
-  // disable action buttons when ap==0 or pendingEvent
-  const locked = !!pendingEvent;
-  const ap0 = state.ap <= 0;
-  el.actShop.disabled = locked || ap0;
-  el.actPurchase.disabled = locked || ap0;
-  el.actExplore.disabled = locked || ap0;
-  el.actTreat.disabled = locked || ap0;
-  el.actRest.disabled = locked;
-}
-
-function renderAffection(){
-  el.affectionList.innerHTML = "";
-  for (const a of ACTORS){
-    const v = state.affection[a.key] || 0;
-    const stage = affectionStage(v);
-    const item = document.createElement("div");
-    item.className = "affItem";
-
-    const top = document.createElement("div");
-    top.className = "affTop";
-
-    const name = document.createElement("div");
-    name.className = "affName";
-    name.textContent = a.name;
-
-    const stageEl = document.createElement("div");
-    stageEl.className = "affStage";
-    stageEl.textContent = `${stage} · ${v}/100`;
-
-    top.appendChild(name);
-    top.appendChild(stageEl);
-
-    const bar = document.createElement("div");
-    bar.className = "affBar";
-    const fill = document.createElement("div");
-    fill.className = "affFill";
-    fill.style.width = `${Math.max(0, Math.min(100, v))}%`;
-    bar.appendChild(fill);
-
-    item.appendChild(top);
-    item.appendChild(bar);
-
-    el.affectionList.appendChild(item);
-  }
-}
-
-function addLine(kind, text){
-  state.log.push({ t: nowTime(), kind, text });
-  if (state.log.length > 250) state.log = state.log.slice(-250);
-  appendLine({ t: nowTime(), kind, text });
-}
-
-function renderLog(){
-  el.log.innerHTML = "";
-  for (const l of state.log){
-    appendLine(l);
-  }
-  el.log.scrollTop = el.log.scrollHeight;
-}
-
-function appendLine(l){
-  const div = document.createElement("div");
-  div.className = `line ${l.kind}`;
-  div.textContent = `[${l.t}] ${l.text}`;
-  el.log.appendChild(div);
-  el.log.scrollTop = el.log.scrollHeight;
-}
-
-function addSys(text){ addLine("sys", text); }
-function addEvt(text){ addLine("evt", text); }
-function addHint(text){ addLine("hint", text); }
-function addWarn(text){ addLine("warn", text); }
-
-function saveState(showToast=false){
-  try{
-    __safeStorage.setItem(SAVE_KEY, JSON.stringify(state));
-  }catch(e){
-    // ignore
-  }
-}
-
-function loadState(){
-  try{
-    const raw = __safeStorage.getItem(SAVE_KEY);
-    if (!raw) return null;
-    const s = JSON.parse(raw);
-    // 兼容补字段
-    const d = defaultState();
-    return {
-      ...d,
-      ...s,
-      inv: { ...d.inv, ...(s.inv || {}) },
-      relations: { ...d.relations, ...(s.relations || {}) },
-      affection: { ...d.affection, ...(s.affection || {}) },
-      flags: { ...(s.flags || {}) },
-      cooldowns: { ...(s.cooldowns || {}) },
-      recentActors: Array.isArray(s.recentActors) ? s.recentActors : [],
-      log: Array.isArray(s.log) ? s.log : [],
-    };
-  }catch(e){
-    return null;
-  }
-}
-
-
-
-function editorTemplateText(){
-  return JSON.stringify([
-    {
-      "id":"user_simon_hello_01",
-      "context":["shop","night","search"],
-      "type":"romance",
-      "actor":"simon",
-      "minAff":0,
-      "maxAff":100,
-      "text":[
-        "西蒙：今天风大，你把门闩扣好，别站在风口。\n你：嗯，我知道了。",
-        "你：你又来巡这片？\n西蒙：路过。顺便看你一眼。"
-      ],
-      "choices":[
-        { "label":"你也喝口热水", "deltaAff":2, "deltaComfort":2, "result":[ "你把杯子推过去。\n西蒙：……好。", "西蒙接过杯子，声音低低的：别把自己冻着。" ] },
-        { "label":"嘴硬：我忙着呢", "deltaAff":1, "deltaComfort":0, "result":[ "你嘴硬，但还是把围巾系紧了。\n西蒙：这就对了。", "西蒙没拆穿你，只把门口的风挡了挡。" ] }
-      ]
-    }
-  ], null, 2);
-}
-
-function initEditor(){
-  var btn = $("btnEditor");
-  if (!btn) return;
-  var modal = $("editorModal");
-  var area = $("editorText");
-  var msg = $("editorMsg");
-
-  function open(){
-    if (!modal) return;
-    modal.style.display = "flex";
-    // load current
-    try{
-      area.value = __safeStorage.getItem(USER_EVENTS_KEY) || "";
-      msg.textContent = "提示：保存后需要刷新页面一次，或点“手动保存”再继续。";
-    }catch(e){}
-  }
-  function close(){
-    if (!modal) return;
-    modal.style.display = "none";
-  }
-
-  btn.addEventListener("click", open);
-  $("editorClose").addEventListener("click", close);
-  $("editorBackdrop").addEventListener("click", close);
-
-  $("editorLoad").addEventListener("click", function(){
-    try{
-      area.value = __safeStorage.getItem(USER_EVENTS_KEY) || "";
-      msg.textContent = "已载入当前自定义剧情。";
-    }catch(e){}
-  });
-
-  $("editorTemplate").addEventListener("click", function(){
-    area.value = editorTemplateText();
-    msg.textContent = "已填入模板。你可以直接改文字、加事件。";
-  });
-
-  $("editorSave").addEventListener("click", function(){
-    try{
-      var txt = area.value.trim();
-      if (!txt){
-        __safeStorage.removeItem(USER_EVENTS_KEY);
-        msg.textContent = "已清空自定义剧情。";
+    el.actDaily.addEventListener("click", () => {
+      if (state.currentScene !== "hub"){
+        addWarn("请回到主线枢纽再选择入口。");
         return;
       }
-      var parsed = JSON.parse(txt);
-      if (!Array.isArray(parsed)) throw new Error("顶层必须是 JSON 数组 []");
-      __safeStorage.setItem(USER_EVENTS_KEY, JSON.stringify(parsed));
-      msg.textContent = "保存成功。为了让新剧情立即加入事件池，请刷新页面后继续（iOS 本地最稳）。";
-    }catch(e){
-      msg.textContent = "保存失败：" + e.message;
-      try{ $("debugPanel").style.display = "block"; }catch(_){}
-      if (window.__WZ_DEBUG) window.__WZ_DEBUG("编辑器保存失败：" + e);
+      enterScene(pickFromPool(dailyMainScenes, "recentDailyMain").id);
+    });
+
+    el.actTurbulence.addEventListener("click", () => {
+      if (state.currentScene !== "hub"){
+        addWarn("请回到主线枢纽再选择入口。");
+        return;
+      }
+      enterScene(pickFromPool(turbulenceScenes, "recentTurbulence").id);
+    });
+
+    el.actNextDay.addEventListener("click", () => {
+      if (state.currentScene !== "hub"){
+        addWarn("请回到主线枢纽再进入下一天。");
+        return;
+      }
+      endDay();
+    });
+  }
+
+  let state = loadState() || defaultState();
+
+  function boot(){
+    if (!state.log.length){
+      addSys("系统上线：任务卡 v0.3。");
+      addSys("每日随机事件已启用。");
+      addHint("提示：张力值越高，互动越有火花。");
+    } else {
+      renderLog();
     }
-  });
+    wire();
+    if (state.day >= 4){
+      el.tipText.textContent = "第 4 天起可尝试收束关系（主线枢纽内）。";
+    }
+    if (!sceneMap[state.currentScene]){
+      state.currentScene = "dayStart";
+    }
+    renderHUD();
+    enterScene(state.currentScene || "dayStart");
+  }
 
-  $("editorClear").addEventListener("click", function(){
-    try{
-      __safeStorage.removeItem(USER_EVENTS_KEY);
-      area.value = "";
-      msg.textContent = "已清空自定义剧情。刷新后生效。";
-    }catch(e){}
-  });
-}
-
-
-
-}catch(e){
-  try{ var el=document.getElementById('jsError'); if(el){el.style.display='block'; el.textContent='初始化失败：'+e; } }catch(_){ }
-}
+  boot();
 })();
 </script>
-<div class="modal" id="editorModal" style="display:none;">
-<div class="modalBackdrop" id="editorBackdrop"></div>
-<div class="modalCard">
-<div class="modalHead">
-<div class="modalTitle">剧情编辑器（可直接加对话）</div>
-<button class="ghost" id="editorClose">关闭</button>
-</div>
-<div class="modalBody">
-<p class="muted" style="margin-top:0;">
-        把你的事件写成 JSON 数组粘贴进来，保存后立刻生效（存在本机，不上传）。
-      </p>
-<textarea class="editorArea" id="editorText" spellcheck="false"></textarea>
-<div class="row" style="gap:10px;flex-wrap:wrap;">
-<button class="ghost" id="editorLoad">载入当前</button>
-<button class="ghost" id="editorTemplate">填入模板</button>
-<button class="primary" id="editorSave">保存并应用</button>
-<button class="ghost" id="editorClear">清空自定义剧情</button>
-</div>
-<div class="muted" id="editorMsg" style="margin-top:8px;"></div>
-</div>
-</div>
-</div>
 <script>
 (function(){
   if (!("serviceWorker" in navigator)) return;
